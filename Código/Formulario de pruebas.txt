@@ -1,0 +1,100 @@
+package form;
+
+import java.util.HashMap;
+
+import com.unit4.karat.base.OTException;
+import com.unit4.karat.form.FMEvent;
+import com.unit4.karat.session.Session;
+import include.EXT_SOP_ASIG_TEC;
+
+public class ext_sop_pruebas extends com.unit4.karat.form.FMDefaultEvents {
+    public enum CONTAINERS {
+        /** <b>Window class:</b> FMContainer.CONTAINER_WINDOW<br> */
+        _K_FIXED,		//NOSONAR
+        /** <b>Window class:</b> FMContainer.CONTAINER_CARD<br>
+        * <b>Caption:</b> Pruebas<br> */
+        card_pruebas,		//NOSONAR
+        /** <b>Window class:</b> FMContainer.CONTAINER_FRAME<br>
+        * <b>Caption:</b> Pruebas de funcionament de gestion de incidencias de soporte<br> */
+        collap_pruebas,		//NOSONAR
+        /** <b>Window class:</b> FMContainer.CONTAINER_WINDOW<br>
+        * <b>Caption:</b> Extom. Pruebas Eric NO TOCAR<br> */
+        ext_sop_pruebas,		//NOSONAR
+        /** <b>Window class:</b> FMContainer.CONTAINER_CARDINDEX<br> */
+        K__MAINCARD		//NOSONAR
+    }
+
+    public enum VIEWS {
+        /** <b>Caption:</b> Asignar incidencias pdtes.<br>
+        * <b>View Type:</b> FMView.VIEW_BUTTON<br> */
+        cmd_asignar_incs_pdtes,		//NOSONAR
+        /** <b>Caption:</b> Empresa activa<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        txtempresa_id,		//NOSONAR
+        /** <b>Caption:</b> Resultado<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        txtresultado_id		//NOSONAR
+    }
+
+    public enum SEGMENTS {
+        /** <b>Description:</b> Extom. Pruebas Eric NO TOCAR<br> */
+        ext_sop_pruebas		//NOSONAR
+    }
+
+    public enum ITEMS {
+        /** <b>Description:</b> Empresa activa<br>
+        * <b>Segment name:</b> ext_sop_pruebas<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Empresa activa<br> */
+        txtempresa_id,		//NOSONAR
+        /** <b>Description:</b> Resultado<br>
+        * <b>Segment name:</b> ext_sop_pruebas<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Resultado<br> */
+        txtresultado_id		//NOSONAR
+    }
+
+    public ext_sop_pruebas(Session session) {
+    	super(session);
+    }
+
+	@Override
+	public void viewClick(FMEvent fmEvent) throws OTException {
+		// TODO Auto-generated method stub
+		super.viewClick(fmEvent);
+		
+		fmEvent.setRecall(true);
+
+		if (fmEvent.isCancelled()) {
+			fmEvent.setRecall(true);
+			return;
+		}
+		
+		String sViewName = fmEvent.getSourceName();
+		String sMensajeError = "";
+		
+		if(sViewName.equalsIgnoreCase("cmd_asignar_incs_pdtes")) {
+			
+			HashMap <String,Object> hmParams = new HashMap <String,Object>();
+			HashMap <String,Object> hmTemp = null;
+			
+			hmParams.put("sEmpresaId",getItem(ITEMS.txtempresa_id).getValue());
+			hmParams.put("sSession",session);
+			
+			hmTemp = EXT_SOP_ASIG_TEC.hmAsignarIncidenciasPdtes(hmParams);
+					
+			//revisar respuestas en hmTemp
+			//y mostrar mensajes emergentes segun proceda.
+			if ("true".equals(hmTemp.get("bError"))) {
+				//mensaje de error
+				sMensajeError = (String) hmTemp.get("sMensajeError");
+			} else {
+				sMensajeError = "Proceso correcto";
+			}
+			
+			boObject.getItem(ITEMS.txtresultado_id).setValue(sMensajeError);
+		}
+		
+	}
+    
+}

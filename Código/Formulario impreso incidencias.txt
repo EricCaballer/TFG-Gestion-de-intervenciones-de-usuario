@@ -1,0 +1,497 @@
+package form;
+
+import java.util.Date;
+
+import com.unit4.karat.base.OTException;
+import com.unit4.karat.base.file.FileSystemObject;
+import com.unit4.karat.da.DACondition;
+import com.unit4.karat.form.FMEvent;
+import com.unit4.karat.report.RE;
+import com.unit4.karat.report.REConfiguration;
+import com.unit4.karat.report.REPrint;
+import com.unit4.karat.session.Session;
+
+public class ext_sop_impreso_inci extends com.unit4.karat.form.FMDefaultEvents {
+    public enum SEGMENTS {
+        /** <b>Description:</b> Filtro para el impreso de incidencias<br> */
+        ext_impreso_filtro,		//NOSONAR
+        /** <b>Description:</b> Cabecera<br>
+        * <b>Base query:</b> ext_sop_incidncs<br> */
+        ext_sop_incidncs,		//NOSONAR
+        /** <b>Description:</b> Líneas<br>
+        * <b>Base query:</b> ext_sop_incid_lin<br> */
+        ext_sop_incidncs_lin		//NOSONAR
+    }
+
+    public enum ITEMS {
+        /** <b>Description:</b> Filtro de ciclo<br>
+        * <b>Segment name:</b> ext_impreso_filtro<br>
+        * <b>Data Type:</b> DA.DA_DT_INTEGER<br>
+        * <b>Input Label:</b> Ciclo<br> */
+        ext_ciclo_f,		//NOSONAR
+        /** <b>Description:</b> Filtro de cliente desde<br>
+        * <b>Segment name:</b> ext_impreso_filtro<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Cliente desde<br> */
+        ext_cliente_desde_f,		//NOSONAR
+        /** <b>Description:</b> Cliente<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xcliente_id<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Código de cliente<br> */
+        ext_cliente_f,		//NOSONAR
+        /** <b>Description:</b> Filtro de cliente hasta<br>
+        * <b>Segment name:</b> ext_impreso_filtro<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Cliente hasta<br> */
+        ext_cliente_hasta_f,		//NOSONAR
+        /** <b>Description:</b> Filtro de fecha desde<br>
+        * <b>Segment name:</b> ext_impreso_filtro<br>
+        * <b>Data Type:</b> DA.DA_DT_DATE<br>
+        * <b>Input Label:</b> Fecha desde<br> */
+        ext_fecha_desde_f,		//NOSONAR
+        /** <b>Description:</b> Filtro de fecha hasta<br>
+        * <b>Segment name:</b> ext_impreso_filtro<br>
+        * <b>Data Type:</b> DA.DA_DT_DATE<br>
+        * <b>Input Label:</b> Fecha hasta<br> */
+        ext_fecha_hasta_f,		//NOSONAR
+        /** <b>Description:</b> Hora de registro de la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xhora_registro<br>
+        * <b>Data Type:</b> DA.DA_DT_DATE<br>
+        * <b>Input Label:</b> Hora de registro de la incidencia<br> */
+        ext_hora_registro_f,		//NOSONAR
+        /** <b>Description:</b> Número identificador de la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xnum_incidencia<br>
+        * <b>Data Type:</b> DA.DA_DT_INTEGER<br>
+        * <b>Input Label:</b> Número identificador de la incidencia<br> */
+        ext_num_incidencia_f,		//NOSONAR
+        /** <b>Description:</b> Filtro de incidencias desde<br>
+        * <b>Segment name:</b> ext_impreso_filtro<br>
+        * <b>Data Type:</b> DA.DA_DT_INTEGER<br>
+        * <b>Input Label:</b> Núm. Incidencia desde<br> */
+        ext_numinc_desde_f,		//NOSONAR
+        /** <b>Description:</b> Filtro de incidencias hasta<br>
+        * <b>Segment name:</b> ext_impreso_filtro<br>
+        * <b>Data Type:</b> DA.DA_DT_INTEGER<br>
+        * <b>Input Label:</b> Núm. Incidencia hasta<br> */
+        ext_numinc_hasta_f,		//NOSONAR
+        /** <b>Description:</b> Filtro de producto contratado<br>
+        * <b>Segment name:</b> ext_impreso_filtro<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Producto<br> */
+        ext_producto_f,		//NOSONAR
+        /** <b>Description:</b> Filtro de técnico<br>
+        * <b>Segment name:</b> ext_impreso_filtro<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Técnico<br> */
+        ext_tecnico_f,		//NOSONAR
+        /** <b>Description:</b> Apellidos de la persona que genera la intervención<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xapellidos<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Apellidos<br> */
+        txtapellidos,		//NOSONAR
+        /** <b>Description:</b> Asunto de la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xasunto<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Asunto<br> */
+        txtasunto,		//NOSONAR
+        /** <b>Description:</b> Indica si la incidencia ha sido cerrada<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xcerrada<br>
+        * <b>Data Type:</b> DA.DA_DT_BOOLEAN<br>
+        * <b>Input Label:</b> Indica si la incidencia ha sido cerrada<br> */
+        txtcerrada,		//NOSONAR
+        /** <b>Description:</b> Ciclo<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xciclo_id<br>
+        * <b>Data Type:</b> DA.DA_DT_INTEGER<br>
+        * <b>Input Label:</b> Ciclo<br> */
+        txtciclo_id,		//NOSONAR
+        /** <b>Description:</b> Ciclo<br>
+        * <b>Segment name:</b> ext_sop_incidncs_lin<br>
+        * <b>Query field:</b> xciclo_id<br>
+        * <b>Data Type:</b> DA.DA_DT_INTEGER<br>
+        * <b>Input Label:</b> Ciclo<br> */
+        txtciclo_id_lin,		//NOSONAR
+        /** <b>Description:</b> Indica si se ha cerrado o no la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs_lin<br>
+        * <b>Query field:</b> xcierre<br>
+        * <b>Data Type:</b> DA.DA_DT_BOOLEAN<br>
+        * <b>Input Label:</b> Indica si se ha cerrado o no la incidencia<br> */
+        txtcierre_lin,		//NOSONAR
+        /** <b>Description:</b> Cliente<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xcliente_id<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Código de cliente<br> */
+        txtcliente_id,		//NOSONAR
+        /** <b>Description:</b> Consultor asociado a la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xconsultor_asociad<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Consultor asociado a la incidencia<br> */
+        txtconsultor_asociad,		//NOSONAR
+        /** <b>Description:</b> Identificador del consultor<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xconsultor_id<br>
+        * <b>Data Type:</b> DA.DA_DT_INTEGER<br>
+        * <b>Input Label:</b> Identificador del consultor<br> */
+        txtconsultor_id,		//NOSONAR
+        /** <b>Description:</b> Contenido del mensaje de la línea<br>
+        * <b>Segment name:</b> ext_sop_incidncs_lin<br>
+        * <b>Query field:</b> xcontenido<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Contenido del mensaje de la línea<br> */
+        txtcontenido_lin,		//NOSONAR
+        /** <b>Description:</b> Descripción de la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xdescripcion<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Descripción de la incidencia<br> */
+        txtdescripcion,		//NOSONAR
+        /** <b>Description:</b> Desviación del tiempo de cierre respecto al compromiso con el cliente<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xdesvporc_cierre<br>
+        * <b>Data Type:</b> DA.DA_DT_CURRENCY<br>
+        * <b>Input Label:</b> Desviación<br> */
+        txtdesvporc_cierre,		//NOSONAR
+        /** <b>Description:</b> Desviación del tiempo de respuesta respecto al compromiso con el cliente<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xdesvporc_respuest<br>
+        * <b>Data Type:</b> DA.DA_DT_CURRENCY<br>
+        * <b>Input Label:</b> Desviación del tiempo de respuesta respecto al compromiso con el cliente<br> */
+        txtdesvporc_respuest,		//NOSONAR
+        /** <b>Description:</b> Correo de la persona que registra la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xemail<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Correo<br> */
+        txtemail,		//NOSONAR
+        /** <b>Description:</b> Empresa<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xempresa_id<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Código de empresa<br> */
+        txtempresa_id,		//NOSONAR
+        /** <b>Description:</b> Empresa<br>
+        * <b>Segment name:</b> ext_sop_incidncs_lin<br>
+        * <b>Query field:</b> xempresa_id<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Código de empresa<br> */
+        txtempresa_id_lin,		//NOSONAR
+        /** <b>Description:</b> Fecha de cierre de la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xfecha_hora_cierre<br>
+        * <b>Data Type:</b> DA.DA_DT_DATE<br>
+        * <b>Input Label:</b> Fecha de cierre de la incidencia<br> */
+        txtfecha_hora_cierre,		//NOSONAR
+        /** <b>Description:</b> Fecha de registro de la línea<br>
+        * <b>Segment name:</b> ext_sop_incidncs_lin<br>
+        * <b>Query field:</b> xfecha_registro<br>
+        * <b>Data Type:</b> DA.DA_DT_DATE<br>
+        * <b>Input Label:</b> Fecha de registro de la línea<br> */
+        txtfecha_registro_lin,		//NOSONAR
+        /** <b>Description:</b> Indica si la incidencia registrada genera otra interna en Ekon<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xgen_int_ekon<br>
+        * <b>Data Type:</b> DA.DA_DT_BOOLEAN<br>
+        * <b>Input Label:</b> Indica si la incidencia registrada genera otra interna en Ekon<br> */
+        txtgen_int_ekon,		//NOSONAR
+        /** <b>Description:</b> Indica si la incidencia registrada genera otra interna en Extom<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xgen_int_interna<br>
+        * <b>Data Type:</b> DA.DA_DT_BOOLEAN<br>
+        * <b>Input Label:</b> Indica si la incidencia registrada genera otra interna en Extom<br> */
+        txtgen_int_interna,		//NOSONAR
+        /** <b>Description:</b> Hora de registro de la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xhora_registro<br>
+        * <b>Data Type:</b> DA.DA_DT_DATE<br>
+        * <b>Input Label:</b> Hora de registro de la incidencia<br> */
+        txthora_registro,		//NOSONAR
+        /** <b>Description:</b> Hora de registro de la línea<br>
+        * <b>Segment name:</b> ext_sop_incidncs_lin<br>
+        * <b>Query field:</b> xhora_registro<br>
+        * <b>Data Type:</b> DA.DA_DT_DATE<br>
+        * <b>Input Label:</b> Hora de registro de la línea<br> */
+        txthora_registro_lin,		//NOSONAR
+        /** <b>Description:</b> Hora de respuesta de la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xhora_respuesta<br>
+        * <b>Data Type:</b> DA.DA_DT_DATE<br>
+        * <b>Input Label:</b> Hora de respuesta de la incidencia<br> */
+        txthora_respuesta,		//NOSONAR
+        /** <b>Description:</b> Indica si es una línea interna de soporte<br>
+        * <b>Segment name:</b> ext_sop_incidncs_lin<br>
+        * <b>Query field:</b> xinterno<br>
+        * <b>Data Type:</b> DA.DA_DT_BOOLEAN<br>
+        * <b>Input Label:</b> Indica si es una línea interna de soporte<br> */
+        txtinterno_lin,		//NOSONAR
+        /** <b>Description:</b> Linea<br>
+        * <b>Segment name:</b> ext_sop_incidncs_lin<br>
+        * <b>Query field:</b> xlinea_id<br>
+        * <b>Data Type:</b> DA.DA_DT_LONG<br>
+        * <b>Input Label:</b> Número de línea<br> */
+        txtlinea_id,		//NOSONAR
+        /** <b>Description:</b> Nivel de soporte del cliente<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xnivel_soporte<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Nivel soporte<br> */
+        txtnivel_soporte,		//NOSONAR
+        /** <b>Description:</b> Nombre de la persona que genera la intervención<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xnombre<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Nombre<br> */
+        txtnombre,		//NOSONAR
+        /** <b>Description:</b> Número identificador de la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xnum_incidencia<br>
+        * <b>Data Type:</b> DA.DA_DT_INTEGER<br>
+        * <b>Input Label:</b> Núm. Incidencia<br> */
+        txtnum_incidencia,		//NOSONAR
+        /** <b>Description:</b> Número identificador de la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs_lin<br>
+        * <b>Query field:</b> xnum_incidencia<br>
+        * <b>Data Type:</b> DA.DA_DT_INTEGER<br>
+        * <b>Input Label:</b> Número identificador de la incidencia<br> */
+        txtnum_incidencia_lin,		//NOSONAR
+        /** <b>Description:</b> Número de incidencia generada en Ekon<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xnum_int_ekon<br>
+        * <b>Data Type:</b> DA.DA_DT_INTEGER<br>
+        * <b>Input Label:</b> Número de incidencia generada en Ekon<br> */
+        txtnum_int_ekon,		//NOSONAR
+        /** <b>Description:</b> Prioridad de la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xprioridad<br>
+        * <b>Data Type:</b> DA.DA_DT_INTEGER<br>
+        * <b>Input Label:</b> Prioridad de la incidencia<br> */
+        txtprioridad,		//NOSONAR
+        /** <b>Description:</b> Producto de la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xproducto_id<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br> */
+        txtproducto_id,		//NOSONAR
+        /** <b>Description:</b> Resultado del cierre de la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xresultado_cierre<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Resultado del cierre de la incidencia<br> */
+        txtresultado_cierre,		//NOSONAR
+        /** <b>Description:</b> Indica si se envía mail de noritificación<br>
+        * <b>Segment name:</b> ext_sop_incidncs_lin<br>
+        * <b>Query field:</b> xsin_mail<br>
+        * <b>Data Type:</b> DA.DA_DT_BOOLEAN<br>
+        * <b>Input Label:</b> Indica si se envía mail de noritificación<br> */
+        txtsin_mail_lin,		//NOSONAR
+        /** <b>Description:</b> Teléfono de la persona que registra la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xtelefono<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Teléfono<br> */
+        txttelefono,		//NOSONAR
+        /** <b>Description:</b> Tiempo máximo de cierre de incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xtiempo_cierre<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Tiempo cierre<br> */
+        txttiempo_cierre,		//NOSONAR
+        /** <b>Description:</b> Tiempo de respuesta transcurrido<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xtiempo_respuesta<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Tiempo de respuesta transcurrido<br> */
+        txttiempo_respuesta,		//NOSONAR
+        /** <b>Description:</b> Tipo de incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xtipo_incidnc_id<br>
+        * <b>Data Type:</b> DA.DA_DT_INTEGER<br>
+        * <b>Input Label:</b> Tipo de incidencia<br> */
+        txttipo_incidnc_id,		//NOSONAR
+        /** <b>Description:</b> Tipo de linea<br>
+        * <b>Segment name:</b> ext_sop_incidncs_lin<br>
+        * <b>Query field:</b> xtipo_lin_id<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Tipo de línea<br> */
+        txttipo_lin_id,		//NOSONAR
+        /** <b>Description:</b> Check para indicar las opciones habituales<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xchk_opciones_hab<br>
+        * <b>Data Type:</b> DA.DA_DT_BOOLEAN<br>
+        * <b>Input Label:</b> Habilitar opciones habituales<br> */
+        xchk_opciones_hab,		//NOSONAR
+        /** <b>Description:</b> Lista de sistema que ofrece las opciones preformateadas para sacar un pdf de preguntas habituales<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xopciones_hab<br>
+        * <b>Data Type:</b> DA.DA_DT_INTEGER<br>
+        * <b>Input Label:</b> Opciones habituales<br> */
+        xopciones_hab		//NOSONAR
+    }
+
+    public enum CONTAINERS {
+        /** <b>Window class:</b> FMContainer.CONTAINER_WINDOW<br> */
+        _K_ACTION,		//NOSONAR
+        /** <b>Window class:</b> FMContainer.CONTAINER_WINDOW<br> */
+        _K_FIXED,		//NOSONAR
+        /** <b>Window class:</b> FMContainer.CONTAINER_WINDOW<br>
+        * <b>Caption:</b> Impresión Incidencias<br> */
+        ext_sop_impreso_inci		//NOSONAR
+    }
+
+    public enum VIEWS {
+        /** <b>Caption:</b> Impresión<br>
+        * <b>View Type:</b> FMView.VIEW_BUTTON<br> */
+        btn_impresion,		//NOSONAR
+        /** <b>Caption:</b> Ciclo<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        ext_ciclo_f,		//NOSONAR
+        /** <b>Caption:</b> Cliente desde<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        ext_cliente_desde_f,		//NOSONAR
+        /** <b>Caption:</b> Cliente hasta<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        ext_cliente_hasta_f,		//NOSONAR
+        /** <b>Caption:</b> Fecha desde<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        ext_fecha_desde_f,		//NOSONAR
+        /** <b>Caption:</b> Fecha hasta<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        ext_fecha_hasta_f,		//NOSONAR
+        /** <b>Caption:</b> Núm. Incidencia desde<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        ext_numinc_desde_f,		//NOSONAR
+        /** <b>Caption:</b> Núm. Incidencia hasta<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        ext_numinc_hasta_f,		//NOSONAR
+        /** <b>Caption:</b> Producto<br>
+        * <b>View Type:</b> FMView.VIEW_DROPLIST<br> */
+        ext_producto_f,		//NOSONAR
+        /** <b>Caption:</b> Técnico<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        ext_tecnico_f		//NOSONAR
+    }
+
+    
+
+    public ext_sop_impreso_inci(Session session) {
+    	super(session);
+    }
+
+	@Override
+	public void viewClick(FMEvent fmEvent) throws OTException {
+		// TODO Auto-generated method stub
+		super.viewClick(fmEvent);
+		
+		if (fmEvent.isCancelled()) {
+			fmEvent.setRecall(true);
+			return;
+		}
+		
+		fmEvent.setRecall(true);
+		
+		String sViewName = fmEvent.getSourceName();
+		
+		String sReport = "";
+		String sFichero = "";
+		FileSystemObject fso = new FileSystemObject();
+		
+		String sEmpresa = boObject.getEnvironment().getVariable("pl_env_empresa", "env_empresa");
+		String sSeccion = boObject.getEnvironment().getVariable("pc_env_empresa", "env_seccion");
+		
+		String sTecnico = "";
+		String sProducto = "";
+		String sCiclo = "";
+		Date dFechaDesde = null;
+		Date dFechaHasta = null;
+		String sNumDocDesde = "";
+		String sNumDocHasta = "";
+		String sClienteDesde = "";
+		String sClienteHasta = "";
+		//boolean bOpcionesHab = false;
+		
+		if(sViewName.equalsIgnoreCase("btn_impresion")) {
+			
+			sTecnico = boObject.getItem(ITEMS.ext_tecnico_f).getValue();
+			sProducto = boObject.getItem(ITEMS.ext_producto_f).getValue();
+			sCiclo = boObject.getItem(ITEMS.ext_ciclo_f).getValue();
+			dFechaDesde = boObject.getItem(ITEMS.ext_fecha_desde_f).getValueDate();
+			dFechaHasta = boObject.getItem(ITEMS.ext_fecha_hasta_f).getValueDate();
+			sNumDocDesde = boObject.getItem(ITEMS.ext_numinc_desde_f).getValue();
+			sNumDocHasta = boObject.getItem(ITEMS.ext_numinc_hasta_f).getValue();
+			sClienteDesde = boObject.getItem(ITEMS.ext_cliente_desde_f).getValue();
+			sClienteHasta = boObject.getItem(ITEMS.ext_cliente_hasta_f).getValue();
+			//bOpcionesHab = boObject.getItem(ITEMS.xchk_opciones_hab).getValueBoolean();
+			
+			sReport = "EXT_SOP_IMPRESO_TFG";
+			REPrint oPrint = new REPrint(session, sReport);
+			REConfiguration oConfig = new REConfiguration(session, sReport, "EKON", true);
+			oConfig.delete();
+
+			oConfig.setCondition("txtempresa_id", DACondition.OPER_EQUAL, new String[]{sEmpresa}, false);
+			oConfig.setCondition("txtseccion_id", DACondition.OPER_EQUAL, new String[]{sSeccion}, false);
+			
+			if(!sTecnico.equalsIgnoreCase("") && sTecnico != null) {
+				oConfig.setCondition("txtconsultor_id", DACondition.OPER_EQUAL, new String[]{sTecnico}, false);
+			}
+			
+			if(!sProducto.equalsIgnoreCase("") && sProducto != null) {
+				oConfig.setCondition("txtproducto_id", DACondition.OPER_EQUAL, new String[]{sProducto}, false);
+			}
+			
+			if(!sCiclo.equalsIgnoreCase("") && sCiclo != null) {
+				oConfig.setCondition("txtciclo_id", DACondition.OPER_EQUAL, new String[]{sCiclo}, false);
+			}
+			
+			if(dFechaDesde != null) {
+				oConfig.setCondition("txthora_registro", DACondition.OPER_GREATEREQUAL, new Date[]{dFechaDesde}, false);
+			}
+			
+			if(dFechaHasta != null) {
+				oConfig.setCondition("ext_hora_registro_f", DACondition.OPER_LESSEREQUAL, new Date[]{dFechaHasta}, false);
+			}
+			
+			if(!sNumDocDesde.equalsIgnoreCase("") && sNumDocDesde != null) {
+				oConfig.setCondition("txtnum_incidencia", DACondition.OPER_GREATEREQUAL, new String[]{sNumDocDesde}, false);
+			}
+			
+			if(!sNumDocHasta.equalsIgnoreCase("") && sNumDocHasta != null) {
+				oConfig.setCondition("ext_num_incidencia_f", DACondition.OPER_LESSEREQUAL, new String[]{sNumDocHasta}, false);
+			}
+			
+			if(!sClienteDesde.equalsIgnoreCase("") && sClienteDesde != null) {
+				oConfig.setCondition("txtcliente_id", DACondition.OPER_GREATEREQUAL, new String[]{sClienteDesde}, false);
+			}
+			
+			if(!sClienteHasta.equalsIgnoreCase("") && sClienteHasta != null) {
+				oConfig.setCondition("ext_cliente_f", DACondition.OPER_LESSEREQUAL, new String[]{sClienteHasta}, false);
+			}
+			
+			oConfig.setCondition("xchk_opciones_hab", DACondition.OPER_EQUAL, new Boolean[]{false}, false);
+			
+			oConfig.setCondition("txtcerrada", DACondition.OPER_EQUAL, new Boolean[]{true}, false);
+			
+			oConfig.save();
+
+			oPrint.setDeviceType(RE.RE_DEVICE_SCREEN);
+			oPrint.setFormat(RE.RE_FORMAT_PDF);
+			oPrint.setDevice(sFichero);
+			oPrint.open(oConfig);
+
+			if (fso.fileExists(sFichero)) {
+				fso.deleteFile(sFichero);
+			}
+
+			oPrint=null;
+			oConfig=null;
+			
+		}
+		
+	}
+    
+}

@@ -1,0 +1,553 @@
+package include;
+
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import com.unit4.karat.base.EmailDelivery;
+import com.unit4.karat.base.OTException;
+import com.unit4.karat.da.DA;
+import com.unit4.karat.da.DAException;
+import com.unit4.karat.da.DAResultSet;
+import com.unit4.karat.report.REMail;
+import com.unit4.karat.session.Session;
+
+public class EXT_SOP_ASIG_TEC {
+
+	//FUNCIONALIDAD ASIGNAR TÉCNICO TFG ERIC
+
+	public static HashMap<String,Object> hmAsignarIncidenciasPdtes(HashMap<String,Object> hmParamsIn) throws OTException {
+
+		HashMap <String,Object> hmRetorno = new HashMap <String,Object>();
+		String sEmpresaId = (String) hmParamsIn.get("sEmpresaId");
+		Session sSession = (Session) hmParamsIn.get("sSession");
+
+		String sProducto = "";
+		int iTecnico = 0;
+		int iPrioridad = 0;
+		int iMaxAbiertas = 0;
+		
+		DAResultSet resTecnicos = null;
+		DAResultSet resTecnicosD = null;
+		DAResultSet resNombreTecnico = null;
+		DAResultSet resIncidencia = null;
+		DAResultSet resIncidenciaCab = null;
+
+		Map<Integer, Integer> hashMapTecnicos = new HashMap<>();
+
+		Calendar calendario = Calendar.getInstance();
+		int iYear = calendario.get(Calendar.YEAR);
+		int iCiclo = 0;
+		int iNumIncidencia = 0;
+		int iNumIncidenciaLin = 0;
+		int iNumLin = 0;
+		
+		String sTipoLin = "";
+		String sNombre = "";
+		String sApellidos = "";
+		String sNombreCliente = "";
+		String sMailCliente = "";
+		String sMailTecnico = "";
+		String sMensajeError = "";
+		String sAsunto = "";
+		String sContenido = "";
+		
+		boolean bLinCerrada = false;
+		boolean bSinMail = false;
+		boolean bInterna = false;
+		boolean bDisponible = false;
+
+		Date dFechaActual = new Date();
+		Date dFechaIncidencia = new Date();
+		Date dFechaIncidenciaLin = new Date();
+
+		hmRetorno.put("bError","true");
+
+		//TO DO
+		//COMPROBAR SI HAY NUEVAS INCIDENCIAS EN LAS TABLAS PARA LA REGLA DE TIEMPO
+		//CONSULTAR LAS QUE NO ESTEN CERRADAS Y LA FECHA DE INCORPORACIÓN DE LA WEB A EKON SEA NULL
+		try {
+			//Consultar la hora de registro de las incidencias
+			String sSqlIncidencia = "SELECT xhora_registro, xproducto_id, xnum_incidencia, xciclo_id, xnombre, xapellidos, xemail, xasunto"
+					+ " FROM " + sSession.getConnectionSource().translateTable("ext_sop_incidncs")
+					+ " WHERE xempresa_id = " + sSession.getConnectionData().formatValue(sEmpresaId, DA.DA_DT_TEXT)
+					+ " AND xcerrada = 0 AND xchk_opciones_hab = 0 AND xfecha_incor_ekon IS NULL" 
+					+ " ORDER BY xhora_registro DESC";
+
+			resIncidencia = sSession.getConnectionData().openSQL(sSqlIncidencia); // AND xhora_registro > '2024-12-01'
+
+			while(resIncidencia.moveNext()) {
+				dFechaIncidencia = resIncidencia.getDate("xhora_registro");
+				sProducto = resIncidencia.getString("xproducto_id");
+				iNumIncidencia = resIncidencia.getInt("xnum_incidencia");
+				iCiclo = resIncidencia.getInt("xciclo_id");
+				sNombreCliente = resIncidencia.getString("xnombre");
+				sNombreCliente += " " + resIncidencia.getString("xapellidos");
+				sMailCliente = resIncidencia.getString("xemail");		
+				sAsunto = resIncidencia.getString("xasunto");
+
+				//SI HAY NUEVAS INCIDENCIAS --> IR A BUSCAR A LA TABLA ext_sop_tecnicos_d las certificaciones
+				//que deben de coincidir con el producto registrado en las incidencias
+
+				try {
+					//Consultar los técnicos que tienen la certificación de la incidencia
+					String sSqlTecnicosD = "SELECT xtecnico_id FROM " + sSession.getConnectionSource().translateTable("ext_sop_tecnicos_d")
+							+ " WHERE xempresa_id = " + sSession.getConnectionData().formatValue(sEmpresaId, DA.DA_DT_TEXT)
+							+ " AND xcertif_id = " + sSession.getConnectionData().formatValue(sProducto, DA.DA_DT_TEXT);
+
+					resTecnicosD = sSession.getConnectionData().openSQL(sSqlTecnicosD);
+
+					while(resTecnicosD.moveNext()) {
+						iTecnico = resTecnicosD.getInt("xtecnico_id");
+
+						//Comprobar la prioridad del técnico y comprobar el xmax_abiertas de la tabla ext_sop_inci_tecs
+						//si tiene menos de 5 se la asignamos, si no, pasamos al siguiente técnico y realizamos un bucle
+
+						try {
+							//Consultar los técnicos que tienen la certificación de la incidencia
+							String sSqlTecnicos = "SELECT xprioridad, xmax_abiertas, xdisponible FROM " + sSession.getConnectionSource().translateTable("ext_sop_tecnicos")
+									+ " WHERE xempresa_id = " + sSession.getConnectionData().formatValue(sEmpresaId, DA.DA_DT_TEXT)
+									+ " AND xtecnico_id = " + sSession.getConnectionData().formatValue(iTecnico, DA.DA_DT_INTEGER);
+
+							resTecnicos = sSession.getConnectionData().openSQL(sSqlTecnicos);
+
+							if(resTecnicos.moveFirst()) {
+								iPrioridad = resTecnicos.getInt("xprioridad");
+								iMaxAbiertas = resTecnicos.getInt("xmax_abiertas");
+								bDisponible = resTecnicos.getBoolean("xdisponible");
+							}
+
+							if(iMaxAbiertas < 5 && bDisponible) {
+								hashMapTecnicos.put(iTecnico, iPrioridad);
+							}
+
+						} catch (DAException e) {
+							e.printStackTrace();
+							e.getMessage();
+							hmRetorno.put("bError", "true");
+							sMensajeError = "Error en consulta incidencias abiertas y disponibilidad técnico: " + e.toString();
+							hmRetorno.put("sMensajeError", sMensajeError);
+							return hmRetorno;
+						} finally {
+							if(resTecnicos != null) {resTecnicos.close(); resTecnicos = null;}
+						}
+
+					} //while tecnicos
+
+				} catch (DAException e) {
+					e.printStackTrace();
+					e.getMessage();
+					hmRetorno.put("bError", "true");
+					sMensajeError = "Error en consulta certificación detalle de técnico: " + e.toString();
+					hmRetorno.put("sMensajeError", sMensajeError);
+					return hmRetorno;
+				} finally {
+					if(resTecnicosD != null) {resTecnicosD.close(); resTecnicosD = null;}
+				}
+
+				//TODO
+				//1. Cogemos el técnico con más prioridad disponible
+				//2. Actualizar tabla de incidencias
+				//3. Actializar la tabla de técnicos aumentando el numero de incidencias del técnico
+				//4. Notificar al cliente y al técnico con la apertura de la incidencia
+
+				//1. Cogemos el técnico con más prioridad disponible
+				int iTecnicoPrioritario = encontrarTecnicoPrioritario(hashMapTecnicos);
+				
+				if(iTecnicoPrioritario == 1000) {
+					//No se ha encontrado técnico
+					hmRetorno.put("bError", "true");
+					sMensajeError = "Error: No se ha encontrado un técnico prioritario.";
+					hmRetorno.put("sMensajeError", sMensajeError);
+					return hmRetorno;					
+				}
+
+				//2. Actualizar tabla de incidencias
+				//Select para coger el nombre del consultor
+				try {
+					String sSqlNombreTecnico = "SELECT xnombre, xapellidos, xemail, xmax_abiertas FROM " + sSession.getConnectionSource().translateTable("ext_sop_tecnicos")
+							+ " WHERE xempresa_id = " + sSession.getConnectionData().formatValue(sEmpresaId, DA.DA_DT_TEXT)
+							+ " AND xtecnico_id = " + sSession.getConnectionData().formatValue(iTecnicoPrioritario, DA.DA_DT_TEXT);
+
+					resNombreTecnico = sSession.getConnectionData().openSQL(sSqlNombreTecnico);
+
+					if(resNombreTecnico.moveFirst()) {
+						sNombre = resNombreTecnico.getString("xnombre");
+						sApellidos = resNombreTecnico.getString("xapellidos");
+						sMailTecnico = resNombreTecnico.getString("xemail");
+						iMaxAbiertas = resNombreTecnico.getInt("xmax_abiertas");
+						iMaxAbiertas++;
+					}
+				} catch (DAException e) {
+					e.printStackTrace();
+					e.getMessage();
+					hmRetorno.put("bError", "true");
+					sMensajeError = "Error en consulta de técnico: " + e.toString();
+					hmRetorno.put("sMensajeError", sMensajeError);
+					return hmRetorno;
+				} finally {
+					if(resNombreTecnico != null) {resNombreTecnico.close(); resNombreTecnico = null;}
+				}
+
+				sNombre = sNombre + " " + sApellidos;
+
+				try {
+					String sUpdate = "UPDATE " + sSession.getConnectionSource().translateTable("ext_sop_incidncs")
+							+ " SET xconsultor_asociad = " + sSession.getConnectionData().formatValue(sNombre, DA.DA_DT_TEXT)
+							+ " , xconsultor_id = " + sSession.getConnectionData().formatValue(iTecnicoPrioritario, DA.DA_DT_INTEGER)
+							+ ", xfecha_incor_ekon = GETDATE()"								
+							+ " WHERE xempresa_id = " + sSession.getConnectionData().formatValue(sEmpresaId,DA.DA_DT_TEXT)
+							+ " AND xnum_incidencia = " + sSession.getConnectionData().formatValue(iNumIncidencia,DA.DA_DT_INTEGER)
+							+ " AND xciclo_id = " + sSession.getConnectionData().formatValue(iCiclo,DA.DA_DT_INTEGER);
+
+					sSession.getConnectionData().execSQL(sUpdate);
+				} catch (DAException e) {
+					e.printStackTrace();
+					e.getMessage();
+					hmRetorno.put("bError", "true");
+					sMensajeError = "Error en actualización de incidencia: " + e.toString();
+					hmRetorno.put("sMensajeError", sMensajeError);
+					return hmRetorno;
+				}
+
+				//3. Actualizar la tabla de técnicos aumentando el numero de incidencias del técnico en una unidad
+				try {
+					String sUpdate = "UPDATE " + sSession.getConnectionSource().translateTable("ext_sop_tecnicos")
+							+ " SET xmax_abiertas = " + sSession.getConnectionData().formatValue(iMaxAbiertas, DA.DA_DT_INTEGER)							
+							+ " WHERE xempresa_id = " + sSession.getConnectionData().formatValue(sEmpresaId,DA.DA_DT_TEXT)
+							+ " AND xtecnico_id = " + sSession.getConnectionData().formatValue(iTecnicoPrioritario,DA.DA_DT_INTEGER);
+
+					sSession.getConnectionData().execSQL(sUpdate);
+				} catch (DAException e) {
+					e.printStackTrace();
+					e.getMessage();
+					hmRetorno.put("bError", "true");
+					sMensajeError = "Error en actualización de incidencias abiertas en técnico: " + e.toString();
+					hmRetorno.put("sMensajeError", sMensajeError);
+					return hmRetorno;
+				}
+
+				//4. Notificar al cliente y al técnico con la apertura de la incidencia
+				//Obtener parametros
+				String sSMTPUser = "soporteEXTOM@hotmail.com";//tecnicoEXTOM@hotmail.com
+				String sSMTPPwd = "ccsccsExtom50";//ccsccsExtom50
+				String sSMTPServer = "smtp.office365.com";//SMTP = smtp.office365.com
+				String sSMTPPort = "587";//Port = 587 (SIN SSL), Port = 465 (CON SSL)
+				String sSMTPSSL = "1";
+
+				// Enviar mail al cliente
+				try {
+					EmailDelivery ed = new EmailDelivery();
+					if ("-1".equals(sSMTPSSL)){
+						ed.setProtocolSMTPS(); 
+					} else { ed.setProtocolSMTP(); }
+					
+					//ed.setSMTPHost(sSMTPServer);
+					ed.setSMTPHost(sSMTPServer,sSMTPUser,sSMTPPwd);
+					ed.setSMTPPort(Integer.parseInt(sSMTPPort));
+					ed.setFrom(sSMTPUser);
+					ed.setTo(sMailCliente);
+					
+//					if(sMailCC!=null && !sMailCC.isEmpty()) {
+//						ed.setCC(sMailCC);
+//					}
+					
+					ed.setSubject("Apertura de incidencia " + iNumIncidencia);
+					ed.setBody("Hola, " + sNombreCliente + "\r\n\r\nHemos recibido satisfactoriamente tu petición de asistencia técnica y nuestro departamento de Soporte ha abierto una incidencia con la siguiente información:\r\n\r\n" + 
+							"Número de incidencia: " + iNumIncidencia + "\r\n" +
+							"Resumen: " + sAsunto + "\r\n" +
+							"Fecha de registro: " + dFechaIncidencia + "\r\n");
+					
+					//Enviar el mail
+					ed.sendMsg();
+					//Mensaje de debug si procede
+				} catch (Exception e){
+					e.printStackTrace();
+					e.getMessage();
+					hmRetorno.put("bError", "true");
+					sMensajeError = "Error en envio de mail al cliente: " + e.toString();
+					hmRetorno.put("sMensajeError", sMensajeError);
+					return hmRetorno;
+				}
+
+				// Enviar mail al técnico
+				try {
+					EmailDelivery ed = new EmailDelivery();
+					if ("-1".equals(sSMTPSSL)){
+						ed.setProtocolSMTPS(); 
+					} else { ed.setProtocolSMTP(); }
+					
+					//ed.setSMTPHost(sSMTPServer);
+					ed.setSMTPHost(sSMTPServer,sSMTPUser,sSMTPPwd);
+					ed.setSMTPPort(Integer.parseInt(sSMTPPort));
+					ed.setFrom(sSMTPUser);
+					ed.setTo(sMailTecnico);
+					
+//					if(sMailCC!=null && !sMailCC.isEmpty()) {
+//						ed.setCC(sMailCC);
+//					}
+					
+					ed.setSubject("Apertura de incidencia " + iNumIncidencia);
+					ed.setBody("Hola, " + sNombre + "\r\n\r\nSe le ha asignado la incidencia número " + iNumIncidencia + ".");
+					
+					//Enviar el mail
+					ed.sendMsg();
+					//Mensaje de debug si procede
+				} catch (Exception e){
+					e.printStackTrace();
+					e.getMessage();
+					hmRetorno.put("bError", "true");
+					sMensajeError = "Error en envio de mail al técnico: " + e.toString();
+					hmRetorno.put("sMensajeError", sMensajeError);
+					return hmRetorno;
+				}
+
+			} //bucle de incidencias 
+
+		} catch (DAException e) {
+			e.printStackTrace();
+			e.getMessage();
+			hmRetorno.put("bError", "true");
+			sMensajeError = "Error en la consulta de incidencias principal: " + e.toString();
+			hmRetorno.put("sMensajeError", sMensajeError);
+			return hmRetorno;
+		} finally {
+			if(resIncidencia != null) {resIncidencia.close(); resIncidencia = null;}
+		}
+		
+		
+		
+		//Realizamos un proceso parecido para las líneas de incidencia que se van generando
+		try {
+			//Consultar la hora de registro de las líneas de incidencias
+			String sSqlIncidencia = "SELECT xnum_incidencia, xlinea_id, xtipo_lin_id, xsin_mail, xinterno, xcontenido, xciclo_id, xfecha_registro"
+					+ " FROM " + sSession.getConnectionSource().translateTable("ext_sop_incid_lin")
+					+ " WHERE xempresa_id = " + sSession.getConnectionData().formatValue(sEmpresaId, DA.DA_DT_TEXT)
+					+ " AND xcierre = 0 AND xfecha_inc_ekon_l IS NULL" // AND xfecha_registro > '2024-12-01'
+					+ " ORDER BY xlinea_id ASC";
+
+			resIncidencia = sSession.getConnectionData().openSQL(sSqlIncidencia);
+
+			//Parametros para el envío de mails
+			String sSMTPUser = "soporteEXTOM@hotmail.com";//tecnicoEXTOM@hotmail.com
+			String sSMTPPwd = "ccsccsExtom50";//ccsccsExtom50
+			String sSMTPServer = "smtp.office365.com";//SMTP = smtp.office365.com
+			String sSMTPPort = "587";//Port = 587 (SIN SSL), Port = 465 (CON SSL)
+			String sSMTPSSL = "1";
+			
+			//Notificar al cliente o al técnico con la carga de nuevas líneas de la incidencia según el tipo de línea
+			while(resIncidencia.moveNext()) {
+				iNumIncidenciaLin = resIncidencia.getInt("xnum_incidencia");
+				iNumLin = resIncidencia.getInt("xlinea_id");
+				sTipoLin = resIncidencia.getString("xtipo_lin_id");
+				bSinMail = resIncidencia.getBoolean("xsin_mail");
+				bInterna = resIncidencia.getBoolean("xinterno");
+				sContenido = resIncidencia.getString("xcontenido");
+				iCiclo = resIncidencia.getInt("xciclo_id");
+				
+				//Consultamos el mail del cliente asociado a la cabecera de la incidencia para 
+				//enviarle el mail
+				try {
+					String sSqlIncidenciaCab = "SELECT xemail, xconsultor_id, xnombre, xapellidos"
+							+ " FROM " + sSession.getConnectionSource().translateTable("ext_sop_incidncs")
+							+ " WHERE xempresa_id = " + sSession.getConnectionData().formatValue(sEmpresaId, DA.DA_DT_TEXT)
+							+ " AND xnum_incidencia = " + sSession.getConnectionData().formatValue(iNumIncidenciaLin, DA.DA_DT_INTEGER)
+							+ " AND xciclo_id = " + sSession.getConnectionData().formatValue(iCiclo, DA.DA_DT_INTEGER);
+
+					resIncidenciaCab = sSession.getConnectionData().openSQL(sSqlIncidenciaCab);
+					
+					if(resIncidenciaCab.moveFirst()) {
+						sMailCliente = resIncidenciaCab.getString("xemail");
+						iTecnico = resIncidenciaCab.getInt("xconsultor_id");
+						sNombreCliente = resIncidenciaCab.getString("xnombre");
+						sNombreCliente += " " + resIncidenciaCab.getString("xapellidos");
+					}
+					
+				} catch (DAException e) {
+					e.printStackTrace();
+					e.getMessage();
+					hmRetorno.put("bError", "true");
+					sMensajeError = "Error en la cabecera de incidencia para las líneas: " + e.toString();
+					hmRetorno.put("sMensajeError", sMensajeError);
+					return hmRetorno;
+				} finally {
+					if(resIncidenciaCab != null) {resIncidenciaCab.close(); resIncidenciaCab = null;}
+				}	
+				
+				//Consultamos el mail del técnico asociado a la cabecera de la incidencia para 
+				//enviarle el mail
+				try {
+					String sSqlTecnicosD = "SELECT xemail FROM " + sSession.getConnectionSource().translateTable("ext_sop_tecnicos")
+							+ " WHERE xempresa_id = " + sSession.getConnectionData().formatValue(sEmpresaId, DA.DA_DT_TEXT)
+							+ " AND xtecnico_id = " + sSession.getConnectionData().formatValue(iTecnico, DA.DA_DT_INTEGER);
+
+					resTecnicos = sSession.getConnectionData().openSQL(sSqlTecnicosD);
+					
+					if(resTecnicos.moveFirst()) {
+						sMailTecnico = resTecnicos.getString("xemail");
+					}
+					
+				} catch (DAException e) {
+					e.printStackTrace();
+					e.getMessage();
+					hmRetorno.put("bError", "true");
+					sMensajeError = "Error en consulta de técnico en líneas: " + e.toString();
+					hmRetorno.put("sMensajeError", sMensajeError);
+					return hmRetorno;
+				} finally {
+					if(resTecnicos != null) {resTecnicos.close(); resTecnicos = null;}
+				}
+				
+				//Actualizamos la fecha de incorporación
+				try {
+					String sUpdate = "UPDATE " + sSession.getConnectionSource().translateTable("ext_sop_incid_lin")
+							+ " SET xfecha_inc_ekon_l = GETDATE()"							
+							+ " WHERE xempresa_id = " + sSession.getConnectionData().formatValue(sEmpresaId,DA.DA_DT_TEXT)
+							+ " AND xnum_incidencia = " + sSession.getConnectionData().formatValue(iNumIncidenciaLin,DA.DA_DT_INTEGER)
+							+ " AND xlinea_id = " + sSession.getConnectionData().formatValue(iNumLin,DA.DA_DT_INTEGER)
+							+ " AND xtipo_lin_id = " + sSession.getConnectionData().formatValue(sTipoLin,DA.DA_DT_TEXT)
+							+ " AND xciclo_id = " + sSession.getConnectionData().formatValue(iCiclo,DA.DA_DT_INTEGER);
+
+					sSession.getConnectionData().execSQL(sUpdate);
+				} catch (DAException e) {
+					e.printStackTrace();
+					e.getMessage();
+					hmRetorno.put("bError", "true");
+					sMensajeError = "Error en actualización de la línea de incidencia: " + e.toString();
+					hmRetorno.put("sMensajeError", sMensajeError);
+					return hmRetorno;
+				}
+				
+				//Comprobamos si la línea no envía mail y si es interna, en ambos casos no notificamos al cliente
+				if(sTipoLin.equalsIgnoreCase("Sop")) {
+					if(!bSinMail) {
+						if(!bInterna) {
+							// Enviar mail al cliente
+							try {
+								EmailDelivery ed = new EmailDelivery();
+								if ("-1".equals(sSMTPSSL)){
+									ed.setProtocolSMTPS(); 
+								} else { ed.setProtocolSMTP(); }
+
+								//ed.setSMTPHost(sSMTPServer);
+								ed.setSMTPHost(sSMTPServer,sSMTPUser,sSMTPPwd);
+								ed.setSMTPPort(Integer.parseInt(sSMTPPort));
+								ed.setFrom(sSMTPUser);
+								ed.setTo(sMailCliente);
+
+								//if(sMailCC!=null && !sMailCC.isEmpty()) {
+								//	ed.setCC(sMailCC);
+								//}
+
+								ed.setSubject("Nueva línea en la incidencia " + iNumIncidenciaLin);
+								ed.setBody("Hola, " + sNombreCliente + "\r\n\r\nSe ha creado una nueva línea con identificador " + iNumLin + " en la incidencia número " + iNumIncidenciaLin + " con el siguiente contenido:\r\n\r\n" + sContenido);
+
+								//Enviar el mail
+								ed.sendMsg();
+								//Mensaje de debug si procede
+							} catch (Exception e){
+								e.printStackTrace();
+								e.getMessage();
+								hmRetorno.put("bError", "true");
+								sMensajeError = "Error en envio de mail al cliente para líneas: " + e.toString();
+								hmRetorno.put("sMensajeError", sMensajeError);
+								return hmRetorno;
+							}
+						}
+					}
+				} else if(sTipoLin.equalsIgnoreCase("Cli")) {
+					if(!bSinMail) {
+						// Enviar mail al técnico
+						try {
+							EmailDelivery ed = new EmailDelivery();
+							if ("-1".equals(sSMTPSSL)){
+								ed.setProtocolSMTPS(); 
+							} else { ed.setProtocolSMTP(); }
+							
+							//ed.setSMTPHost(sSMTPServer);
+							ed.setSMTPHost(sSMTPServer,sSMTPUser,sSMTPPwd);
+							ed.setSMTPPort(Integer.parseInt(sSMTPPort));
+							ed.setFrom(sSMTPUser);
+							ed.setTo(sMailTecnico);
+							
+//							if(sMailCC!=null && !sMailCC.isEmpty()) {
+//								ed.setCC(sMailCC);
+//							}
+							
+							ed.setSubject("Nueva línea en la incidencia " + iNumIncidenciaLin);
+							ed.setBody("Hola, " + sNombre + "\r\n\r\nSe ha creado una nueva línea con identificador " + iNumLin + " en la incidencia número " + iNumIncidenciaLin + " con el siguiente contenido:\r\n\r\n" + sContenido);
+							
+							//Enviar el mail
+							ed.sendMsg();
+							//Mensaje de debug si procede
+						} catch (Exception e){
+							e.printStackTrace();
+							e.getMessage();
+							hmRetorno.put("bError", "true");
+							sMensajeError = "Error en envio de mail al técnico para líneas: " + e.toString();
+							hmRetorno.put("sMensajeError", sMensajeError);
+							return hmRetorno;
+						}
+					}
+				}
+				
+			}
+			
+		} catch (DAException e) {
+			e.printStackTrace();
+			e.getMessage();
+			hmRetorno.put("bError", "true");
+			sMensajeError = "Error en líneas de incidencia: " + e.toString();
+			hmRetorno.put("sMensajeError", sMensajeError);
+			return hmRetorno;
+		} finally {
+			if(resIncidencia != null) {resIncidencia.close(); resIncidencia = null;}
+		}
+		
+
+		hmRetorno.put("bError","false");
+		return hmRetorno;
+	}
+
+	// Función para verificar si la diferencia entre dos fechas es menor o igual a un número de minutos dado
+	private static boolean VerificarHoraIncidencias(Date fecha1, Date fecha2, int minutosMaximos) {
+		Calendar calendar1 = Calendar.getInstance();
+		calendar1.setTime(fecha1);
+
+		Calendar calendar2 = Calendar.getInstance();
+		calendar2.setTime(fecha2);
+
+		long diferenciaEnMillis = Math.abs(calendar1.getTimeInMillis() - calendar2.getTimeInMillis());
+		long diferenciaEnMinutos = diferenciaEnMillis / (60 * 1000);
+
+		return diferenciaEnMinutos <= minutosMaximos;
+	}
+
+	//Función que devuelve la clave del valor más prioritario de manera DESCENDENTE de 9..1
+	private static int encontrarTecnicoPrioritario(Map<Integer, Integer> mapa) {
+
+		//Control del mapa por si está vacío o es nulo
+		if (mapa == null || mapa.isEmpty()) {
+			throw new IllegalArgumentException("No se han encontrado técnicos para las incidecias");
+		}
+
+		int valorMaximo = 1000;
+		int claveTecnico = 1000;
+
+		for (Map.Entry<Integer, Integer> entry : mapa.entrySet()) {
+			int valorActual = entry.getValue();
+
+			// Actualizar la claveMaxima si se encuentra un valor más grande
+			if (valorActual < valorMaximo) {
+				valorMaximo = valorActual;
+				claveTecnico = entry.getKey();
+			}
+		}
+
+		// Devolver la clave con el valor más grande
+		return claveTecnico;
+	}
+
+
+}

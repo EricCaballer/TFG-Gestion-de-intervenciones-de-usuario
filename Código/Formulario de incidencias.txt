@@ -1,0 +1,1401 @@
+package form;
+
+import java.math.BigDecimal;
+import java.sql.Timestamp;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.DayOfWeek;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.Calendar;
+import java.util.Date;
+
+import com.unit4.karat.base.EmailDelivery;
+import com.unit4.karat.base.OTException;
+import com.unit4.karat.da.DA;
+import com.unit4.karat.da.DACounter;
+import com.unit4.karat.da.DAException;
+import com.unit4.karat.da.DAResultSet;
+import com.unit4.karat.da.DAUtils;
+import com.unit4.karat.form.FMEvent;
+import com.unit4.karat.session.Session;
+
+public class ext_sop_incidncs extends com.unit4.karat.form.FMDefaultEvents {
+    public enum CONTAINERS {
+        /** <b>Window class:</b> FMContainer.CONTAINER_WINDOW<br> */
+        _K_ACTION,		//NOSONAR
+        /** <b>Window class:</b> FMContainer.CONTAINER_WINDOW<br> */
+        _K_FIXED,		//NOSONAR
+        /** <b>Window class:</b> FMContainer.CONTAINER_CARD<br>
+        * <b>Caption:</b> General<br> */
+        card1,		//NOSONAR
+        /** <b>Window class:</b> FMContainer.CONTAINER_FRAME<br>
+        * <b>Caption:</b> Datos cliente<br> */
+        collap_datos_cli,		//NOSONAR
+        /** <b>Window class:</b> FMContainer.CONTAINER_FRAME<br>
+        * <b>Caption:</b> Datos de intervención<br> */
+        collap_datos_int,		//NOSONAR
+        /** <b>Window class:</b> FMContainer.CONTAINER_FRAME<br>
+        * <b>Caption:</b> Datos de líneas<br> */
+        collap_datos_lin,		//NOSONAR
+        /** <b>Window class:</b> FMContainer.CONTAINER_FRAME<br>
+        * <b>Caption:</b> Respuestas habituales<br> */
+        collap_resp_hab,		//NOSONAR
+        /** <b>Window class:</b> FMContainer.CONTAINER_WINDOW<br>
+        * <b>Caption:</b> Incidencias<br> */
+        ext_sop_incidncs,		//NOSONAR
+        /** <b>Window class:</b> FMContainer.CONTAINER_GRID<br>
+        * <b>Caption:</b> Detalle<br> */
+        grd_det_lineas,		//NOSONAR
+        /** <b>Window class:</b> FMContainer.CONTAINER_CARDINDEX<br> */
+        K__MAINCARD		//NOSONAR
+    }
+
+    public enum VIEWS {
+        /** <b>Caption:</b> Cerrar intervención<br>
+        * <b>View Type:</b> FMView.VIEW_BUTTON<br> */
+        btn_cerrar_int,		//NOSONAR
+        /** <b>Caption:</b> Reabrir intervención<br>
+        * <b>View Type:</b> FMView.VIEW_BUTTON<br> */
+        btn_reabrir_int,		//NOSONAR
+        /** <b>Caption:</b> Apellidos<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        txtapellidos,		//NOSONAR
+        /** <b>Caption:</b> Asunto<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        txtasunto,		//NOSONAR
+        /** <b>Caption:</b> Cerrada<br>
+        * <b>View Type:</b> FMView.VIEW_CHKSIMP<br> */
+        txtcerrada,		//NOSONAR
+        /** <b>Caption:</b> Ciclo<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        txtciclo_id,		//NOSONAR
+        /** <b>Caption:</b> Cerrada<br>
+        * <b>View Type:</b> FMView.VIEW_CHKSIMP<br> */
+        txtcierre_lin,		//NOSONAR
+        /** <b>Caption:</b> Cliente<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        txtcliente_id,		//NOSONAR
+        /** <b>Caption:</b> Consultor asociado<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        txtconsultor_asociad,		//NOSONAR
+        /** <b>Caption:</b> Contenido<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        txtcontenido_lin,		//NOSONAR
+        /** <b>Caption:</b> Descripción<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        txtdescripcion,		//NOSONAR
+        /** <b>Caption:</b> Desviación<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        txtdesvporc_cierre,		//NOSONAR
+        /** <b>Caption:</b> Desviación<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        txtdesvporc_respuest,		//NOSONAR
+        /** <b>Caption:</b> Correo<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        txtemail,		//NOSONAR
+        /** <b>Caption:</b> Fecha/Hora cierre<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        txtfecha_hora_cierre,		//NOSONAR
+        /** <b>Caption:</b> Fecha de registro<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        txtfecha_registro_lin,		//NOSONAR
+        /** <b>Caption:</b> Int. Ekon<br>
+        * <b>View Type:</b> FMView.VIEW_CHKSIMP<br> */
+        txtgen_int_ekon,		//NOSONAR
+        /** <b>Caption:</b> Int. Extom<br>
+        * <b>View Type:</b> FMView.VIEW_CHKSIMP<br> */
+        txtgen_int_interna,		//NOSONAR
+        /** <b>Caption:</b> Fecha/Hora registro<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        txthora_registro,		//NOSONAR
+        /** <b>Caption:</b> Hora de registro<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        txthora_registro_lin,		//NOSONAR
+        /** <b>Caption:</b> Fecha/Hora respuesta<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        txthora_respuesta,		//NOSONAR
+        /** <b>Caption:</b> Interna<br>
+        * <b>View Type:</b> FMView.VIEW_CHKSIMP<br> */
+        txtinterno_lin,		//NOSONAR
+        /** <b>Caption:</b> Línea<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        txtlinea_id,		//NOSONAR
+        /** <b>Caption:</b> Nivel soporte<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        txtnivel_soporte,		//NOSONAR
+        /** <b>Caption:</b> Nombre<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        txtnombre,		//NOSONAR
+        /** <b>Caption:</b> Incidencia<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        txtnum_incidencia,		//NOSONAR
+        /** <b>Caption:</b> Prioridad<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        txtprioridad,		//NOSONAR
+        /** <b>Caption:</b> Producto<br>
+        * <b>View Type:</b> FMView.VIEW_DROPLIST<br> */
+        txtproducto_id,		//NOSONAR
+        /** <b>Caption:</b> Resultado cierre<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        txtresultado_cierre,		//NOSONAR
+        /** <b>Caption:</b> Sin mail<br>
+        * <b>View Type:</b> FMView.VIEW_CHKSIMP<br> */
+        txtsin_mail_lin,		//NOSONAR
+        /** <b>Caption:</b> Teléfono<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        txttelefono,		//NOSONAR
+        /** <b>Caption:</b> Tiempo de cierre<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        txttiempo_cierre,		//NOSONAR
+        /** <b>Caption:</b> Tiempo de respuesta<br>
+        * <b>View Type:</b> FMView.VIEW_TEXTBOX<br> */
+        txttiempo_respuesta,		//NOSONAR
+        /** <b>Caption:</b> Tipo de incidencia<br>
+        * <b>View Type:</b> FMView.VIEW_DROPLIST<br> */
+        txttipo_incidnc_id,		//NOSONAR
+        /** <b>Caption:</b> Tipo línea<br>
+        * <b>View Type:</b> FMView.VIEW_DROPLIST<br> */
+        txttipo_lin_id,		//NOSONAR
+        /** <b>Caption:</b> Habilitar opciones habituales<br>
+        * <b>View Type:</b> FMView.VIEW_CHKSIMP<br> */
+        xchk_opciones_hab,		//NOSONAR
+        /** <b>Caption:</b> Opciones habituales<br>
+        * <b>View Type:</b> FMView.VIEW_DROPLIST<br> */
+        xopciones_hab		//NOSONAR
+    }
+
+    public enum SEGMENTS {
+        ext_impreso_filtro,		//NOSONAR
+        /** <b>Description:</b> Cabecera<br>
+        * <b>Base query:</b> ext_sop_incidncs<br> */
+        ext_sop_incidncs,		//NOSONAR
+        /** <b>Description:</b> Líneas<br>
+        * <b>Base query:</b> ext_sop_incid_lin<br> */
+        ext_sop_incidncs_lin		//NOSONAR
+    }
+
+    public enum ITEMS {
+        /** <b>Description:</b> Filtro de ciclo<br>
+        * <b>Segment name:</b> ext_impreso_filtro<br>
+        * <b>Data Type:</b> DA.DA_DT_INTEGER<br>
+        * <b>Input Label:</b> Ciclo<br> */
+        ext_ciclo_f,		//NOSONAR
+        /** <b>Description:</b> Filtro de fecha desde<br>
+        * <b>Segment name:</b> ext_impreso_filtro<br>
+        * <b>Data Type:</b> DA.DA_DT_DATE<br>
+        * <b>Input Label:</b> Fecha desde<br> */
+        ext_fecha_desde_f,		//NOSONAR
+        /** <b>Description:</b> Filtro de fecha hasta<br>
+        * <b>Segment name:</b> ext_impreso_filtro<br>
+        * <b>Data Type:</b> DA.DA_DT_DATE<br>
+        * <b>Input Label:</b> Fecha hasta<br> */
+        ext_fecha_hasta_f,		//NOSONAR
+        /** <b>Description:</b> Hora de registro de la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xhora_registro<br>
+        * <b>Data Type:</b> DA.DA_DT_DATE<br>
+        * <b>Input Label:</b> Hora de registro de la incidencia<br> */
+        ext_hora_registro_f,		//NOSONAR
+        /** <b>Description:</b> Número identificador de la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xnum_incidencia<br>
+        * <b>Data Type:</b> DA.DA_DT_INTEGER<br>
+        * <b>Input Label:</b> Número identificador de la incidencia<br> */
+        ext_num_incidencia_f,		//NOSONAR
+        /** <b>Description:</b> Filtro de incidencias desde<br>
+        * <b>Segment name:</b> ext_impreso_filtro<br>
+        * <b>Data Type:</b> DA.DA_DT_INTEGER<br>
+        * <b>Input Label:</b> Núm. Incidencia desde<br> */
+        ext_numinc_desde_f,		//NOSONAR
+        /** <b>Description:</b> Filtro de incidencias hasta<br>
+        * <b>Segment name:</b> ext_impreso_filtro<br>
+        * <b>Data Type:</b> DA.DA_DT_INTEGER<br>
+        * <b>Input Label:</b> Núm. Incidencia hasta<br> */
+        ext_numinc_hasta_f,		//NOSONAR
+        /** <b>Description:</b> Filtro de producto contratado<br>
+        * <b>Segment name:</b> ext_impreso_filtro<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Producto<br> */
+        ext_producto_f,		//NOSONAR
+        /** <b>Description:</b> Filtro de técnico<br>
+        * <b>Segment name:</b> ext_impreso_filtro<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Técnico<br> */
+        ext_tecnico_f,		//NOSONAR
+        /** <b>Description:</b> Apellidos de la persona que genera la intervención<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xapellidos<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Apellidos<br> */
+        txtapellidos,		//NOSONAR
+        /** <b>Description:</b> Asunto de la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xasunto<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Asunto<br> */
+        txtasunto,		//NOSONAR
+        /** <b>Description:</b> Indica si la incidencia ha sido cerrada<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xcerrada<br>
+        * <b>Data Type:</b> DA.DA_DT_BOOLEAN<br>
+        * <b>Input Label:</b> Indica si la incidencia ha sido cerrada<br> */
+        txtcerrada,		//NOSONAR
+        /** <b>Description:</b> Ciclo<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xciclo_id<br>
+        * <b>Data Type:</b> DA.DA_DT_INTEGER<br>
+        * <b>Input Label:</b> Ciclo<br> */
+        txtciclo_id,		//NOSONAR
+        /** <b>Description:</b> Ciclo<br>
+        * <b>Segment name:</b> ext_sop_incidncs_lin<br>
+        * <b>Query field:</b> xciclo_id<br>
+        * <b>Data Type:</b> DA.DA_DT_INTEGER<br>
+        * <b>Input Label:</b> Ciclo<br> */
+        txtciclo_id_lin,		//NOSONAR
+        /** <b>Description:</b> Indica si se ha cerrado o no la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs_lin<br>
+        * <b>Query field:</b> xcierre<br>
+        * <b>Data Type:</b> DA.DA_DT_BOOLEAN<br>
+        * <b>Input Label:</b> Indica si se ha cerrado o no la incidencia<br> */
+        txtcierre_lin,		//NOSONAR
+        /** <b>Description:</b> Cliente<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xcliente_id<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Código de cliente<br> */
+        txtcliente_id,		//NOSONAR
+        /** <b>Description:</b> Consultor asociado a la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xconsultor_asociad<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Consultor asociado a la incidencia<br> */
+        txtconsultor_asociad,		//NOSONAR
+        /** <b>Description:</b> Identificador del consultor<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xconsultor_id<br>
+        * <b>Data Type:</b> DA.DA_DT_INTEGER<br>
+        * <b>Input Label:</b> Identificador del consultor<br> */
+        txtconsultor_id,		//NOSONAR
+        /** <b>Description:</b> Contenido del mensaje de la línea<br>
+        * <b>Segment name:</b> ext_sop_incidncs_lin<br>
+        * <b>Query field:</b> xcontenido<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Contenido del mensaje de la línea<br> */
+        txtcontenido_lin,		//NOSONAR
+        /** <b>Description:</b> Descripción de la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xdescripcion<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Descripción de la incidencia<br> */
+        txtdescripcion,		//NOSONAR
+        /** <b>Description:</b> Desviación del tiempo de cierre respecto al compromiso con el cliente<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xdesvporc_cierre<br>
+        * <b>Data Type:</b> DA.DA_DT_CURRENCY<br>
+        * <b>Input Label:</b> Desviación<br> */
+        txtdesvporc_cierre,		//NOSONAR
+        /** <b>Description:</b> Desviación del tiempo de respuesta respecto al compromiso con el cliente<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xdesvporc_respuest<br>
+        * <b>Data Type:</b> DA.DA_DT_CURRENCY<br>
+        * <b>Input Label:</b> Desviación del tiempo de respuesta respecto al compromiso con el cliente<br> */
+        txtdesvporc_respuest,		//NOSONAR
+        /** <b>Description:</b> Correo de la persona que registra la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xemail<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Correo<br> */
+        txtemail,		//NOSONAR
+        /** <b>Description:</b> Empresa<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xempresa_id<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Código de empresa<br> */
+        txtempresa_id,		//NOSONAR
+        /** <b>Description:</b> Empresa<br>
+        * <b>Segment name:</b> ext_sop_incidncs_lin<br>
+        * <b>Query field:</b> xempresa_id<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Código de empresa<br> */
+        txtempresa_id_lin,		//NOSONAR
+        /** <b>Description:</b> Fecha de cierre de la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xfecha_hora_cierre<br>
+        * <b>Data Type:</b> DA.DA_DT_DATE<br>
+        * <b>Input Label:</b> Fecha de cierre de la incidencia<br> */
+        txtfecha_hora_cierre,		//NOSONAR
+        /** <b>Description:</b> Fecha de registro de la línea<br>
+        * <b>Segment name:</b> ext_sop_incidncs_lin<br>
+        * <b>Query field:</b> xfecha_registro<br>
+        * <b>Data Type:</b> DA.DA_DT_DATE<br>
+        * <b>Input Label:</b> Fecha de registro de la línea<br> */
+        txtfecha_registro_lin,		//NOSONAR
+        /** <b>Description:</b> Indica si la incidencia registrada genera otra interna en Ekon<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xgen_int_ekon<br>
+        * <b>Data Type:</b> DA.DA_DT_BOOLEAN<br>
+        * <b>Input Label:</b> Indica si la incidencia registrada genera otra interna en Ekon<br> */
+        txtgen_int_ekon,		//NOSONAR
+        /** <b>Description:</b> Indica si la incidencia registrada genera otra interna en Extom<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xgen_int_interna<br>
+        * <b>Data Type:</b> DA.DA_DT_BOOLEAN<br>
+        * <b>Input Label:</b> Indica si la incidencia registrada genera otra interna en Extom<br> */
+        txtgen_int_interna,		//NOSONAR
+        /** <b>Description:</b> Hora de registro de la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xhora_registro<br>
+        * <b>Data Type:</b> DA.DA_DT_DATE<br>
+        * <b>Input Label:</b> Hora de registro de la incidencia<br> */
+        txthora_registro,		//NOSONAR
+        /** <b>Description:</b> Hora de registro de la línea<br>
+        * <b>Segment name:</b> ext_sop_incidncs_lin<br>
+        * <b>Query field:</b> xhora_registro<br>
+        * <b>Data Type:</b> DA.DA_DT_DATE<br>
+        * <b>Input Label:</b> Hora de registro de la línea<br> */
+        txthora_registro_lin,		//NOSONAR
+        /** <b>Description:</b> Hora de respuesta de la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xhora_respuesta<br>
+        * <b>Data Type:</b> DA.DA_DT_DATE<br>
+        * <b>Input Label:</b> Hora de respuesta de la incidencia<br> */
+        txthora_respuesta,		//NOSONAR
+        /** <b>Description:</b> Indica si es una línea interna de soporte<br>
+        * <b>Segment name:</b> ext_sop_incidncs_lin<br>
+        * <b>Query field:</b> xinterno<br>
+        * <b>Data Type:</b> DA.DA_DT_BOOLEAN<br>
+        * <b>Input Label:</b> Indica si es una línea interna de soporte<br> */
+        txtinterno_lin,		//NOSONAR
+        /** <b>Description:</b> Linea<br>
+        * <b>Segment name:</b> ext_sop_incidncs_lin<br>
+        * <b>Query field:</b> xlinea_id<br>
+        * <b>Data Type:</b> DA.DA_DT_LONG<br>
+        * <b>Input Label:</b> Número de línea<br> */
+        txtlinea_id,		//NOSONAR
+        /** <b>Description:</b> Nivel de soporte del cliente<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xnivel_soporte<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Nivel soporte<br> */
+        txtnivel_soporte,		//NOSONAR
+        /** <b>Description:</b> Nombre de la persona que genera la intervención<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xnombre<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Nombre<br> */
+        txtnombre,		//NOSONAR
+        /** <b>Description:</b> Número identificador de la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xnum_incidencia<br>
+        * <b>Data Type:</b> DA.DA_DT_INTEGER<br>
+        * <b>Input Label:</b> Núm. Incidencia<br> */
+        txtnum_incidencia,		//NOSONAR
+        /** <b>Description:</b> Número identificador de la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs_lin<br>
+        * <b>Query field:</b> xnum_incidencia<br>
+        * <b>Data Type:</b> DA.DA_DT_INTEGER<br>
+        * <b>Input Label:</b> Número identificador de la incidencia<br> */
+        txtnum_incidencia_lin,		//NOSONAR
+        /** <b>Description:</b> Número de incidencia generada en Ekon<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xnum_int_ekon<br>
+        * <b>Data Type:</b> DA.DA_DT_INTEGER<br>
+        * <b>Input Label:</b> Número de incidencia generada en Ekon<br> */
+        txtnum_int_ekon,		//NOSONAR
+        /** <b>Description:</b> Prioridad de la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xprioridad<br>
+        * <b>Data Type:</b> DA.DA_DT_INTEGER<br>
+        * <b>Input Label:</b> Prioridad de la incidencia<br> */
+        txtprioridad,		//NOSONAR
+        /** <b>Description:</b> Producto de la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xproducto_id<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br> */
+        txtproducto_id,		//NOSONAR
+        /** <b>Description:</b> Resultado del cierre de la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xresultado_cierre<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Resultado del cierre de la incidencia<br> */
+        txtresultado_cierre,		//NOSONAR
+        /** <b>Description:</b> Indica si se envía mail de noritificación<br>
+        * <b>Segment name:</b> ext_sop_incidncs_lin<br>
+        * <b>Query field:</b> xsin_mail<br>
+        * <b>Data Type:</b> DA.DA_DT_BOOLEAN<br>
+        * <b>Input Label:</b> Indica si se envía mail de noritificación<br> */
+        txtsin_mail_lin,		//NOSONAR
+        /** <b>Description:</b> Teléfono de la persona que registra la incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xtelefono<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Teléfono<br> */
+        txttelefono,		//NOSONAR
+        /** <b>Description:</b> Tiempo máximo de cierre de incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xtiempo_cierre<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Tiempo cierre<br> */
+        txttiempo_cierre,		//NOSONAR
+        /** <b>Description:</b> Tiempo de respuesta transcurrido<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xtiempo_respuesta<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Tiempo de respuesta transcurrido<br> */
+        txttiempo_respuesta,		//NOSONAR
+        /** <b>Description:</b> Tipo de incidencia<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xtipo_incidnc_id<br>
+        * <b>Data Type:</b> DA.DA_DT_INTEGER<br>
+        * <b>Input Label:</b> Tipo de incidencia<br> */
+        txttipo_incidnc_id,		//NOSONAR
+        /** <b>Description:</b> Tipo de linea<br>
+        * <b>Segment name:</b> ext_sop_incidncs_lin<br>
+        * <b>Query field:</b> xtipo_lin_id<br>
+        * <b>Data Type:</b> DA.DA_DT_TEXT<br>
+        * <b>Input Label:</b> Tipo de línea<br> */
+        txttipo_lin_id,		//NOSONAR
+        /** <b>Description:</b> Check para indicar las opciones habituales<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xchk_opciones_hab<br>
+        * <b>Data Type:</b> DA.DA_DT_BOOLEAN<br>
+        * <b>Input Label:</b> Habilitar opciones habituales<br> */
+        xchk_opciones_hab,		//NOSONAR
+        /** <b>Description:</b> Lista de sistema que ofrece las opciones preformateadas para sacar un pdf de preguntas habituales<br>
+        * <b>Segment name:</b> ext_sop_incidncs<br>
+        * <b>Query field:</b> xopciones_hab<br>
+        * <b>Data Type:</b> DA.DA_DT_INTEGER<br>
+        * <b>Input Label:</b> Opciones habituales<br> */
+        xopciones_hab		//NOSONAR
+    }
+    
+    public ext_sop_incidncs(Session session) {
+    	super(session);
+    }
+	
+	@Override
+	public void formNewRecord(FMEvent fmEvent) throws OTException {
+		// TODO Auto-generated method stub
+		super.formNewRecord(fmEvent);
+		fmEvent.setRecall(true);
+		
+        Calendar calendar = Calendar.getInstance();
+        int iYear = calendar.get(Calendar.YEAR);
+        boObject.getItem(ITEMS.txtciclo_id).setValue(iYear);
+        
+		Date dFechaHoy = new Date();
+		boObject.getItem(ITEMS.txthora_registro).setValue(dFechaHoy);
+		
+		String sContador = "EXT_SOP_INCID";
+		int iIdent = session.getConnectionSource().getCounter().getCounterValue(sContador, DACounter.DA_GLOBAL_COUNTER, 1);
+		session.getConnectionSource().getCounter().getCounterIncrement(sContador, DACounter.DA_GLOBAL_COUNTER);
+		
+		boObject.getItem(ITEMS.txtnum_incidencia).setValue(iIdent);
+
+	}
+
+	@Override
+	public void formPostLoad(FMEvent fmEvent) throws OTException {
+		// TODO Auto-generated method stub
+		super.formPostLoad(fmEvent);
+		
+		boolean bRespHab = boObject.getItem(ITEMS.xchk_opciones_hab).getValueBoolean();
+		
+		if(bRespHab) {
+			fmObject.getContainer("collap_resp_hab").setVisible(true);
+			fmObject.getContainer("collap_datos_int").setVisible(false);
+			fmObject.getContainer("collap_datos_lin").setVisible(false);
+			fmObject.getView(VIEWS.xopciones_hab).setReadOnly(false);
+			
+			boObject.getItem(ITEMS.txttipo_incidnc_id).setMandatory(false);
+			boObject.getItem(ITEMS.txtproducto_id).setMandatory(false);
+			boObject.getItem(ITEMS.txtprioridad).setMandatory(false);
+			boObject.getItem(ITEMS.txtasunto).setMandatory(false);
+			boObject.getItem(ITEMS.txtdescripcion).setMandatory(false);
+		} else {
+			boObject.getItem(ITEMS.xopciones_hab).setValue("");
+			fmObject.getContainer("collap_resp_hab").setVisible(false);
+			fmObject.getContainer("collap_datos_int").setVisible(true);
+			fmObject.getContainer("collap_datos_lin").setVisible(true);
+			fmObject.getView(VIEWS.xopciones_hab).setReadOnly(true);
+			
+			boObject.getItem(ITEMS.txttipo_incidnc_id).setMandatory(true);
+			boObject.getItem(ITEMS.txtproducto_id).setMandatory(true);
+			boObject.getItem(ITEMS.txtprioridad).setMandatory(true);
+			boObject.getItem(ITEMS.txtasunto).setMandatory(true);
+			boObject.getItem(ITEMS.txtdescripcion).setMandatory(true);
+		}
+		
+	}
+	
+	@Override
+	public void formItemValidate(FMEvent fmEvent) throws OTException {
+		// TODO Auto-generated method stub
+		super.formItemValidate(fmEvent);
+		fmEvent.setRecall(true);
+
+		if (fmEvent.isCancelled()) {
+			fmEvent.setRecall(true);
+			return;
+		}
+
+		String sControlName = fmEvent.getSourceName();
+		String sEmpresa = boObject.getEnvironment().getVariable("pl_env_empresa", "env_empresa");
+		String sNivelSoporte = "";
+		String sCliente = "";
+		String sMensajeError = "";
+		DAResultSet resCliente = null;
+		
+		if(sControlName.equalsIgnoreCase("txtcliente_id")) {
+			sCliente = boObject.getItem(ITEMS.txtcliente_id).getValue();
+			
+			//Coger el nivel de soporte del cliente
+			try {
+				String sSqlCliente = "SELECT ext_sop_nvlsop FROM " + session.getConnectionSource().translateTable("pl_clientes")
+						+ " WHERE xempresa_id = " + session.getConnectionData().formatValue(sEmpresa, DA.DA_DT_TEXT)
+						+ " AND xcliente_id = " + session.getConnectionData().formatValue(sCliente, DA.DA_DT_TEXT);
+
+				resCliente = session.getConnectionData().openSQL(sSqlCliente);
+
+				if(resCliente.moveFirst()) {
+					sNivelSoporte = resCliente.getString("ext_sop_nvlsop");
+				}
+			} catch (DAException e) {
+				e.printStackTrace();
+				e.getMessage();
+				sMensajeError = "Error en las líneas: "+ e.toString();
+				fmObject.showMessageText(sMensajeError, "Aceptar");
+				
+				return;
+			}
+
+			if(resCliente != null) {resCliente.close(); resCliente = null;}
+			
+			boObject.getItem(ITEMS.txtnivel_soporte).setValue(sNivelSoporte);
+			
+		}
+		
+		if(sControlName.equalsIgnoreCase("txttipo_lin_id")) {
+			Date dFechaRegistro = boObject.getItem(ITEMS.txtfecha_registro_lin).getValueDate();
+			
+			if(dFechaRegistro == null) {
+				Date dFechaHoy = new Date();
+				boObject.getItem(ITEMS.txtfecha_registro_lin).setValue(dFechaHoy);
+				boObject.getItem(ITEMS.txthora_registro_lin).setValue(dFechaHoy);
+				
+				Calendar calendar = Calendar.getInstance();
+		        int iYear = calendar.get(Calendar.YEAR);
+		        boObject.getItem(ITEMS.txtciclo_id_lin).setValue(iYear);
+			}			
+		}
+		
+		if(sControlName.equalsIgnoreCase("xchk_opciones_hab")) {
+			boolean bRespHab = boObject.getItem(ITEMS.xchk_opciones_hab).getValueBoolean();
+			
+			if(bRespHab) {
+				fmObject.getContainer("collap_resp_hab").setVisible(true);
+				fmObject.getContainer("collap_datos_int").setVisible(false);
+				fmObject.getContainer("collap_datos_lin").setVisible(false);
+				fmObject.getView(VIEWS.xopciones_hab).setReadOnly(false);
+				
+				boObject.getItem(ITEMS.txttipo_incidnc_id).setMandatory(false);
+				boObject.getItem(ITEMS.txtproducto_id).setMandatory(false);
+				boObject.getItem(ITEMS.txtprioridad).setMandatory(false);
+				boObject.getItem(ITEMS.txtasunto).setMandatory(false);
+				boObject.getItem(ITEMS.txtdescripcion).setMandatory(false);
+			} else {
+				boObject.getItem(ITEMS.xopciones_hab).setValue("");
+				fmObject.getContainer("collap_resp_hab").setVisible(false);
+				fmObject.getContainer("collap_datos_int").setVisible(true);
+				fmObject.getContainer("collap_datos_lin").setVisible(true);
+				fmObject.getView(VIEWS.xopciones_hab).setReadOnly(true);
+				
+				boObject.getItem(ITEMS.txttipo_incidnc_id).setMandatory(true);
+				boObject.getItem(ITEMS.txtproducto_id).setMandatory(true);
+				boObject.getItem(ITEMS.txtprioridad).setMandatory(true);
+				boObject.getItem(ITEMS.txtasunto).setMandatory(true);
+				boObject.getItem(ITEMS.txtdescripcion).setMandatory(true);
+			}
+		}
+		
+	}
+
+	@Override
+	public void formPreUpdateOut(FMEvent fmEvent) throws OTException {
+		// TODO Auto-generated method stub
+		super.formPostUpdateOut(fmEvent);
+		fmEvent.setRecall(true);
+		
+		String sEmpresa = boObject.getEnvironment().getVariable("pl_env_empresa", "env_empresa");
+		int iNumIncidencia = boObject.getItem(ITEMS.txtnum_incidencia).getValueInteger();
+		int iCiclo = boObject.getItem(ITEMS.txtciclo_id).getValueInteger();
+		int iLinea = 0;
+		String sMensajeError = "";
+		String sMailCliente = "";
+		
+		boolean bOpcionesHab = false;
+		
+		//Si no hay ningún problema procedemos
+		if(!fmEvent.isFailed()) {
+			
+			//Comprobar si la incidencia existe
+			try {
+				
+				String sSqlIncidencia = "SELECT COUNT(*) FROM " + session.getConnectionSource().translateTable("ext_sop_incidncs")	
+						+ " WHERE xempresa_id = " + session.getConnectionData().formatValue(sEmpresa,DA.DA_DT_TEXT)
+						+ " AND xnum_incidencia = " + session.getConnectionData().formatValue(iNumIncidencia, DA.DA_DT_INTEGER)
+						+ " AND xciclo_id = " + session.getConnectionData().formatValue(iCiclo, DA.DA_DT_INTEGER);
+
+				Object[] valores = session.getConnectionData().getRow(sSqlIncidencia);
+				
+				int iExisteIncidencia = valores == null || valores[0] == null ? 0 : DAUtils.getInt(valores[0]);
+				
+				//Si existe
+				if(iExisteIncidencia > 0) {
+					
+					bOpcionesHab = boObject.getItem(ITEMS.xchk_opciones_hab).getValueBoolean();
+					
+					if(bOpcionesHab) {						
+						fmObject.showMessageText("Esta incidencia con identificador: " + iNumIncidencia + ", no se puede modificar con opciones habituales"
+								+ " ya que está registrada y asignada a un técnico.", "Aceptar");
+						boObject.getItem(ITEMS.xchk_opciones_hab).setValue(false);
+						fmObject.getView(VIEWS.xchk_opciones_hab).validate();
+						fmEvent.setCancel(true);
+						return;
+					} 
+	
+					//Comprobamos si se ha modificado la cabecera de la incidencia
+//					try {
+//						//Consultar las líneas de incidencias 
+//						String sSqlIncidenciaLin = "SELECT xnum_incidencia FROM " + session.getConnectionSource().translateTable("ext_sop_incidncs")
+//								+ " WHERE xempresa_id = " + session.getConnectionData().formatValue(sEmpresa, DA.DA_DT_TEXT)
+//								+ " AND xcerrada = 0 AND xfecha_inc_ekon_l IS NOT NULL"
+//								+ " ORDER BY xfecha_registro DESC, xhora_registro DESC";
+//
+//						DAResultSet resIncidenciaLin = session.getConnectionData().openSQL(sSqlIncidenciaLin);
+//
+//						while(resIncidenciaLin.moveNext()) {
+//							iNumIncidencia = resIncidenciaLin.getInt("xnum_incidencia");
+//
+////							try {
+////								String sUpdate = "UPDATE " + session.getConnectionSource().translateTable("ext_sop_incidncs")
+////										+ " SET xfecha_ult_modif = GETDATE()"							
+////										+ " WHERE xempresa_id = " + session.getConnectionData().formatValue(sEmpresa,DA.DA_DT_TEXT)
+////										+ " AND xnum_incidencia = " + session.getConnectionData().formatValue(iNumIncidencia,DA.DA_DT_INTEGER);
+//		//
+////								session.getConnectionData().execSQL(sUpdate);
+////							} catch (DAException e) {
+////								e.printStackTrace();
+////								e.getMessage();
+////								sMensajeError = "Error en la actualizacion de la linea " + iLinea + ": " + e.toString();
+////								fmObject.showMessageText(sMensajeError, "Aceptar");
+//		//
+////								return;
+////							}
+//						}
+//					} catch (DAException e) {
+//						e.printStackTrace();
+//						e.getMessage();
+//						sMensajeError = "Error en la cabecera: "+ e.toString();
+//						fmObject.showMessageText(sMensajeError, "Aceptar");
+//						
+//						return;
+//					}
+				
+				} else {
+					
+					bOpcionesHab = boObject.getItem(ITEMS.xchk_opciones_hab).getValueBoolean();
+					
+					if(bOpcionesHab) {
+						int iOpcion = boObject.getItem(ITEMS.xopciones_hab).getValueInteger();
+						String sNombreFichero = "";
+						String sOpcion = "";
+						
+						switch (iOpcion) {
+							case 1: //Problemas de lentitud
+								sNombreFichero = "Problemas de lentitud.pdf";
+								sOpcion = "Problemas de lentitud";
+								break;
+							case 2: //No funciona el servidor
+								sNombreFichero = "No funciona el servidor.pdf";
+								sOpcion = "No funciona el servidor";
+								break;
+							default:
+								fmObject.showMessageText("Opción no válida.", "Aceptar");
+								return;
+						}
+						
+						//Informamos el asunto de la incidencia
+						boObject.getItem(ITEMS.txtasunto).setValue("Opciones habituales: " + sOpcion);
+						
+						sMailCliente = boObject.getItem(ITEMS.txtemail).getValue();
+						String sRutaDestino = session.getWorkDirCommon();
+						String sRuta = sRutaDestino + "\\Respuestas habituales//" + sNombreFichero;
+						
+						//Notificamos al cliente con el PDF
+						String sSMTPUser = "";//
+						String sSMTPPwd = "";
+						String sSMTPServer = "smtp.office365.com";//SMTP = smtp.office365.com
+						String sSMTPPort = "587";//Port = 587 (SIN SSL), Port = 465 (CON SSL)
+						String sSMTPSSL = "1";
+
+						// Enviar mail al cliente
+						try {
+							EmailDelivery ed = new EmailDelivery();
+							if ("-1".equals(sSMTPSSL)){
+								ed.setProtocolSMTPS(); 
+							} else { ed.setProtocolSMTP(); }
+							
+							//ed.setSMTPHost(sSMTPServer);
+							ed.setSMTPHost(sSMTPServer,sSMTPUser,sSMTPPwd);
+							ed.setSMTPPort(Integer.parseInt(sSMTPPort));
+							ed.setFrom(sSMTPUser);
+							ed.setTo(sMailCliente);
+							
+//							if(sMailCC!=null && !sMailCC.isEmpty()) {
+//								ed.setCC(sMailCC);
+//							}
+														
+							ed.setSubject("Apertura de incidencia " + iNumIncidencia);
+							ed.setBody("Hola, \r\n\r\nSe le adjunta el manual solicitado en PDF referente a las opciones habituales que ha seleccionado.");
+							ed.addFileAttachment(sRuta);
+							
+							//Enviar el mail
+							ed.sendMsg();
+							//Mensaje de debug si procede
+						} catch (Exception e){
+							e.printStackTrace();
+							e.getMessage();
+							sMensajeError = "Error en envio de mail al cliente: " + e.toString();
+							fmObject.showMessageText(sMensajeError, "Aceptar");
+							return;
+						}
+						
+						fmObject.showMessageText("Incidencia creada correctamente con identificador: " + iNumIncidencia + ".\r\nSe procede a enviar el manual en PDF.", "Aceptar");
+					} else {
+						fmObject.showMessageText("Incidencia creada correctamente con identificador: " + iNumIncidencia + ".", "Aceptar");
+					}					
+				}
+				
+			} catch (DAException e) {
+				e.printStackTrace();
+				e.getMessage();
+				sMensajeError = "Error en la incidencia: "+ e.toString();
+				fmObject.showMessageText(sMensajeError, "Aceptar");
+				
+				return;
+			}
+			
+		}
+	}
+
+	@Override
+	public void formPostUpdateOut(FMEvent fmEvent) throws OTException {
+		// TODO Auto-generated method stub
+		super.formPostUpdateOut(fmEvent);
+		fmEvent.setRecall(true);
+		
+		String sEmpresa = boObject.getEnvironment().getVariable("pl_env_empresa", "env_empresa");
+		int iNumIncidencia = boObject.getItem(ITEMS.txtnum_incidencia).getValueInteger();
+		int iCiclo = boObject.getItem(ITEMS.txtciclo_id).getValueInteger();
+		String sNivelSoporte = boObject.getItem(ITEMS.txtnivel_soporte).getValue();
+		String sMensajeError = "";
+		Date dFechaRespuesta = boObject.getItem(ITEMS.txthora_respuesta).getValueDate();
+		Date dFechaRegistro = null;
+		Date dHoraRegistro = null;	
+		LocalDateTime fechaInicio = null;
+	    LocalDateTime fechaFin = null;
+	    int iTiempoRespuesta = 0;
+		Date dCompHoraRegistro = null;
+		boolean bComprobacion = false;
+	    
+		SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
+	    SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm");
+        DateTimeFormatter respuestaFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        Duration duration = null;
+        long dias = 0;
+        long horas = 0;
+        long minutos = 0;
+        long minDesv = 0;
+        String sTiempoRespuesta = "";
+
+	    Calendar calFecha = Calendar.getInstance();
+        Calendar calHora = Calendar.getInstance();        
+        Date fechaFinal = null;
+        
+        Timestamp timestamp = null;
+        Date dFechaRegistroCab = boObject.getItem(ITEMS.txthora_registro).getValueDate();
+	    
+		DAResultSet resIncidenciaL = null;
+		DAResultSet resNivelSop = null;
+		
+		//Si no hay ningún problema procedemos
+		if(!fmEvent.isFailed()) {
+			
+			if(dFechaRespuesta == null) {
+				
+				//Comprobamos si tiene líneas de soporte
+				try {					
+					String sSqlIncidenciaL = "SELECT COUNT(*) FROM " + session.getConnectionSource().translateTable("ext_sop_incid_lin")	
+							+ " WHERE xempresa_id = " + session.getConnectionData().formatValue(sEmpresa,DA.DA_DT_TEXT)
+							+ " AND xnum_incidencia = " + session.getConnectionData().formatValue(iNumIncidencia, DA.DA_DT_INTEGER)
+							+ " AND xtipo_lin_id = " + session.getConnectionData().formatValue("Sop",DA.DA_DT_TEXT);
+
+					Object[] valores2 = session.getConnectionData().getRow(sSqlIncidenciaL);
+					
+					int iNumLineas = valores2 == null || valores2[0] == null ? 0 : DAUtils.getInt(valores2[0]);
+					
+					if(iNumLineas > 0) {
+						//En este caso la incidencia ya tiene líneas de soporte, por lo que tenemos que actualizar el campo fecha/hora 1a respuesta
+						
+						try {
+							sSqlIncidenciaL = "SELECT TOP 1 xfecha_registro, xhora_registro FROM " + session.getConnectionSource().translateTable("ext_sop_incid_lin")	
+									+ " WHERE xempresa_id = " + session.getConnectionData().formatValue(sEmpresa,DA.DA_DT_TEXT)
+									+ " AND xnum_incidencia = " + session.getConnectionData().formatValue(iNumIncidencia, DA.DA_DT_INTEGER)
+									+ " AND xtipo_lin_id = " + session.getConnectionData().formatValue("Sop",DA.DA_DT_TEXT)
+									+ " AND xsin_mail = 0 AND xinterno = 0"
+									+ " ORDER BY xlinea_id ASC";
+
+							resIncidenciaL = session.getConnectionData().openSQL(sSqlIncidenciaL);
+							
+							if(resIncidenciaL.moveFirst()) {
+								dFechaRegistro = resIncidenciaL.getDate("xfecha_registro");
+								timestamp =  resIncidenciaL.getTimestamp("xhora_registro");
+								
+								if (timestamp != null) {
+							        try {
+										dHoraRegistro = timeFormat.parse(timeFormat.format(new Date(timestamp.getTime())));
+									} catch (ParseException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+										e.getMessage();
+										sMensajeError = "Error en la conversión de la hora: "+ e.toString();
+										fmObject.showMessageText(sMensajeError, "Aceptar");
+										
+										return;
+									}
+							    }
+							}
+							
+							if(resIncidenciaL != null) {resIncidenciaL.close(); resIncidenciaL = null;}
+
+					        calFecha.setTime(dFechaRegistro);
+					        calHora.setTime(dHoraRegistro);
+					        
+					        calFecha.set(Calendar.HOUR_OF_DAY, calHora.get(Calendar.HOUR_OF_DAY));
+				            calFecha.set(Calendar.MINUTE, calHora.get(Calendar.MINUTE));
+					        
+					        fechaFinal = calFecha.getTime();
+					        
+					        fechaInicio = dFechaRegistroCab.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+					        fechaFin = fechaFinal.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+					        
+					        duration = Duration.between(fechaInicio, fechaFin);
+					        
+					        dias = duration.toDays();
+					        horas = duration.toHours() % 24;
+					        minutos = duration.toMinutes() % 60;
+					        minDesv = duration.toMinutes();
+					        
+					        sTiempoRespuesta = dias + " días, " + horas + " horas, " + minutos + " minutos";
+					        
+					        //Cogemos el tiempo maximo de respuesta para calcular la desviación
+					        try {
+								String sSqlCliente = "SELECT xtiempo_respuesta FROM " + session.getConnectionSource().translateTable("ext_sop_nvl_spte")
+										+ " WHERE xempresa_id = " + session.getConnectionData().formatValue(sEmpresa, DA.DA_DT_TEXT)
+										+ " AND xcodigo_id = " + session.getConnectionData().formatValue(sNivelSoporte, DA.DA_DT_TEXT);
+
+								resNivelSop = session.getConnectionData().openSQL(sSqlCliente);
+
+								if(resNivelSop.moveFirst()) {
+									iTiempoRespuesta = resNivelSop.getInt("xtiempo_respuesta");
+									iTiempoRespuesta *= 60; 
+								}
+								
+								if(resNivelSop != null) {resNivelSop.close(); resNivelSop = null;}
+								
+							} catch (DAException e) {
+								e.printStackTrace();
+								e.getMessage();
+								sMensajeError = "Error en el nivel de soporte: "+ e.toString();
+								fmObject.showMessageText(sMensajeError, "Aceptar");
+								
+								return;
+							}
+					        
+					        try {
+								String sUpdate = "UPDATE " + session.getConnectionSource().translateTable("ext_sop_incidncs")
+										+ " SET xhora_respuesta = " + session.getConnectionData().formatValue(fechaFinal, DA.DA_DT_DATE)
+										+ ", xtiempo_respuesta = " + session.getConnectionData().formatValue(sTiempoRespuesta,DA.DA_DT_TEXT)
+										+ ", xdesvporc_respuest = cast(Round((((cast(isnull(" + minDesv + ",0) as decimal) * 100)/cast(isnull(" + iTiempoRespuesta + ",0) as decimal))/100),4) as decimal(19,4))"
+										+ " WHERE xempresa_id = " + session.getConnectionData().formatValue(sEmpresa,DA.DA_DT_TEXT)
+										+ " AND xnum_incidencia = " + session.getConnectionData().formatValue(iNumIncidencia,DA.DA_DT_INTEGER)
+										+ " AND xciclo_id = " + session.getConnectionData().formatValue(iCiclo,DA.DA_DT_INTEGER);
+
+								session.getConnectionData().execSQL(sUpdate);
+							} catch (DAException e) {
+								e.printStackTrace();
+								e.getMessage();
+								sMensajeError = "Error en la actualización de la fecha primera respuesta: "+ e.toString();
+								fmObject.showMessageText(sMensajeError, "Aceptar");
+								
+								return;
+							}
+					        							
+						} catch (DAException e) {
+							e.printStackTrace();
+							e.getMessage();
+							sMensajeError = "Error en la selección de la línea con la fecha primera respuesta: "+ e.toString();
+							fmObject.showMessageText(sMensajeError, "Aceptar");
+							
+							return;
+						}
+												
+					}	
+					
+				} catch (DAException e) {
+					e.printStackTrace();
+					e.getMessage();
+					sMensajeError = "Error en el conteo de líneas: "+ e.toString();
+					fmObject.showMessageText(sMensajeError, "Aceptar");
+					
+					return;
+				}
+				
+			}
+			
+			try {
+				String sSqlIncidenciaLin = "SELECT xhora_registro FROM " + session.getConnectionSource().translateTable("ext_sop_incidncs")
+						+ " WHERE xempresa_id = " + session.getConnectionData().formatValue(sEmpresa, DA.DA_DT_TEXT)
+						+ " AND xnum_incidencia = " + session.getConnectionData().formatValue(iNumIncidencia,DA.DA_DT_INTEGER)
+						+ " AND xciclo_id = " + session.getConnectionData().formatValue(iCiclo,DA.DA_DT_INTEGER);
+
+				DAResultSet resHoraRegistro = session.getConnectionData().openSQL(sSqlIncidenciaLin);
+				
+				if(resHoraRegistro.moveFirst()) {
+					dCompHoraRegistro = resHoraRegistro.getDate("xhora_registro");
+					
+					if(dCompHoraRegistro != null) {
+						bComprobacion = true;
+					}
+				}
+				
+			} catch (DAException e) {
+				e.printStackTrace();
+				e.getMessage();
+				sMensajeError = "Error en la comprobación de la hora de registro: "+ e.toString();
+				fmObject.showMessageText(sMensajeError, "Aceptar");
+				
+				return;
+			}	
+			
+			if(!bComprobacion) {
+				try {
+					String sUpdate = "UPDATE " + session.getConnectionSource().translateTable("ext_sop_incidncs")
+							+ " SET xhora_registro = " + session.getConnectionData().formatValue(dFechaRegistroCab, DA.DA_DT_DATE)
+							+ " WHERE xempresa_id = " + session.getConnectionData().formatValue(sEmpresa,DA.DA_DT_TEXT)
+							+ " AND xnum_incidencia = " + session.getConnectionData().formatValue(iNumIncidencia,DA.DA_DT_INTEGER)
+							+ " AND xciclo_id = " + session.getConnectionData().formatValue(iCiclo,DA.DA_DT_INTEGER);
+
+					session.getConnectionData().execSQL(sUpdate);
+				} catch (DAException e) {
+					e.printStackTrace();
+					e.getMessage();
+					sMensajeError = "Error en la actualización de la hora de registro: "+ e.toString();
+					fmObject.showMessageText(sMensajeError, "Aceptar");
+					
+					return;
+				}
+			}			
+		}		
+	}
+
+	@Override
+	public void viewClick(FMEvent fmEvent) throws OTException {
+		// TODO Auto-generated method stub
+		super.viewClick(fmEvent);
+		
+		fmEvent.setRecall(true);
+
+		if (fmEvent.isCancelled()) {
+			fmEvent.setRecall(true);
+			return;
+		}
+		
+		String sViewName = fmEvent.getSourceName();
+		String sEmpresa = boObject.getEnvironment().getVariable("pl_env_empresa", "env_empresa");
+		int iTecnico = 0;
+		int iMaxAbiertas = 0;
+		String sMensajeError = "";
+		DAResultSet resTecnicos = null;
+		String sMailCliente = "";
+		String sMailTecnico = "";
+		String sNombre = "";
+		String sApellidos = "";
+		int iIncidencia = 0;
+		Date dFechaInicio = boObject.getItem(ITEMS.txthora_registro).getValueDate();
+		long diferenciaTotalDias = 0;
+		long diasLaborables = 0;
+		DayOfWeek dayOfWeek = null;
+		String sNivelSoporte = boObject.getItem(ITEMS.txtnivel_soporte).getValue();
+		int iTiempoCierre = 0;
+		BigDecimal cDesviacion = BigDecimal.ZERO;
+		
+		String sResultadoCierre = boObject.getItem(ITEMS.txtresultado_cierre).getValue();
+		
+		if(sViewName.equalsIgnoreCase("btn_cerrar_int")) {
+
+			int ret = fmObject.showMessageText(1, "Desea realizar el cierre de la incidencia?\r\n", "Sí/No", 1, "Cierre de incidencia");
+
+			if (ret == 1) {
+				
+				if(sResultadoCierre.equalsIgnoreCase("") || sResultadoCierre == null) {
+					fmObject.showMessageText("No se ha informado el resultado de cierre, se cancela el proceso.", "Aceptar");
+					return;
+				}
+				
+				Date dFechaHoy = new Date();
+				boObject.getItem(ITEMS.txtfecha_hora_cierre).setValue(dFechaHoy);
+				boObject.getItem(ITEMS.txtcerrada).setValue(true);
+				
+				Calendar calendarInicio = Calendar.getInstance();
+				calendarInicio.setTime(dFechaInicio);
+				int idiaInicio = calendarInicio.get(Calendar.DAY_OF_MONTH);
+		        int imesInicio = calendarInicio.get(Calendar.MONTH) + 1; // Se suma 1 porque los meses en Calendar van de 0 a 11
+		        int ianoInicio = calendarInicio.get(Calendar.YEAR);
+		        
+		        Calendar calendarFin = Calendar.getInstance();
+		        calendarFin.setTime(dFechaHoy);
+		        int idiaFin = calendarFin.get(Calendar.DAY_OF_MONTH);
+		        int imesFin = calendarFin.get(Calendar.MONTH) + 1; // Se suma 1 porque los meses en Calendar van de 0 a 11
+		        int ianoFin = calendarFin.get(Calendar.YEAR);
+		        
+				//Cálculo de los días transcurridos entre la fecha de inicio y la fecha de cierre
+				LocalDate fechaInicio = LocalDate.of(ianoInicio, imesInicio, idiaInicio);
+			    LocalDate fechaFin = LocalDate.of(ianoFin, imesFin, idiaFin);
+				
+			    //Cálculo la diferencia de días
+		        diferenciaTotalDias = ChronoUnit.DAYS.between(fechaInicio, fechaFin);		        
+
+		        for (long i = 0; i <= diferenciaTotalDias; i++) {
+		            LocalDate fechaActual = fechaInicio.plusDays(i);
+		            dayOfWeek = fechaActual.getDayOfWeek();
+		            
+		            // Verificar si el día actual es laborable (lunes a viernes)
+		            if (dayOfWeek != DayOfWeek.SATURDAY && dayOfWeek != DayOfWeek.SUNDAY) {
+		                diasLaborables++;
+		            }
+		        }
+		        
+		        boObject.getItem(ITEMS.txttiempo_cierre).setValue(diasLaborables + " días");
+		        
+		      //Cogemos el tiempo maximo de respuesta para calcular la desviación
+		        try {
+					String sSqlCliente = "SELECT xtiempo_cierre FROM " + session.getConnectionSource().translateTable("ext_sop_nvl_spte")
+							+ " WHERE xempresa_id = " + session.getConnectionData().formatValue(sEmpresa, DA.DA_DT_TEXT)
+							+ " AND xcodigo_id = " + session.getConnectionData().formatValue(sNivelSoporte, DA.DA_DT_TEXT);
+
+					DAResultSet resNivelSop = session.getConnectionData().openSQL(sSqlCliente);
+
+					if(resNivelSop.moveFirst()) {
+						iTiempoCierre = resNivelSop.getInt("xtiempo_cierre");
+						iTiempoCierre /= 24; 
+					}
+					
+					if(resNivelSop != null) {resNivelSop.close(); resNivelSop = null;}
+					
+				} catch (DAException e) {
+					e.printStackTrace();
+					e.getMessage();
+					sMensajeError = "Error en el nivel de soporte: "+ e.toString();
+					fmObject.showMessageText(sMensajeError, "Aceptar");
+					
+					return;
+				}
+			    
+		        cDesviacion = cDesviacion.add(new BigDecimal(diasLaborables));
+		        
+		        cDesviacion = cDesviacion.divide(new BigDecimal(iTiempoCierre));
+		        
+		        boObject.getItem(ITEMS.txtdesvporc_cierre).setValue(cDesviacion);
+		        
+				sMailCliente = boObject.getItem(ITEMS.txtemail).getValue();
+				iIncidencia = boObject.getItem(ITEMS.txtnum_incidencia).getValueInteger();
+				
+				iTecnico = boObject.getItem(ITEMS.txtconsultor_id).getValueInteger();
+				
+				//Actualizamos las incidencias abiertas del técnico asociado a la incidencia
+				try {
+					String sSqlTecnicos = "SELECT xmax_abiertas, xemail, xnombre, xapellidos FROM " + session.getConnectionSource().translateTable("ext_sop_tecnicos")
+							+ " WHERE xempresa_id = " + session.getConnectionData().formatValue(sEmpresa, DA.DA_DT_TEXT)
+							+ " AND xtecnico_id = " + session.getConnectionData().formatValue(iTecnico, DA.DA_DT_INTEGER);
+
+					resTecnicos = session.getConnectionData().openSQL(sSqlTecnicos);
+
+					if(resTecnicos.moveFirst()) {
+						iMaxAbiertas = resTecnicos.getInt("xmax_abiertas");
+						iMaxAbiertas--;
+						sMailTecnico = resTecnicos.getString("xemail");
+						sNombre = resTecnicos.getString("xnombre");
+						sApellidos = resTecnicos.getString("xapellidos");
+						sNombre += " " + sApellidos;
+					}
+
+				} catch (DAException e) {
+					e.printStackTrace();
+					e.getMessage();
+					sMensajeError = "Error en las líneas: "+ e.toString();
+					fmObject.showMessageText(sMensajeError, "Aceptar");
+					
+					return;
+				} finally {
+					if(resTecnicos != null) {resTecnicos.close(); resTecnicos = null;}
+				}
+				
+				try {
+					String sUpdate = "UPDATE " + session.getConnectionSource().translateTable("ext_sop_tecnicos")
+							+ " SET xmax_abiertas = " + session.getConnectionData().formatValue(iMaxAbiertas, DA.DA_DT_INTEGER)							
+							+ " WHERE xempresa_id = " + session.getConnectionData().formatValue(sEmpresa,DA.DA_DT_TEXT)
+							+ " AND xtecnico_id = " + session.getConnectionData().formatValue(iTecnico,DA.DA_DT_INTEGER);
+
+					session.getConnectionData().execSQL(sUpdate);
+				} catch (DAException e) {
+					e.printStackTrace();
+					e.getMessage();
+					sMensajeError = "Error en las líneas: "+ e.toString();
+					fmObject.showMessageText(sMensajeError, "Aceptar");
+					
+					return;
+				}
+
+				//Notificamos al cliente y al técnico
+				String sSMTPUser = "";
+				String sSMTPPwd = "";
+				String sSMTPServer = "smtp.office365.com";//SMTP = smtp.office365.com
+				String sSMTPPort = "587";//Port = 587 (SIN SSL), Port = 465 (CON SSL)
+				String sSMTPSSL = "1";
+
+				//Encuesta
+				//soporteextom@gmail.com / ccsccsExtom50
+				// Enviar mail al cliente
+				try {
+					EmailDelivery ed = new EmailDelivery();
+					if ("-1".equals(sSMTPSSL)){
+						ed.setProtocolSMTPS(); 
+					} else { ed.setProtocolSMTP(); }
+					
+					//ed.setSMTPHost(sSMTPServer);
+					ed.setSMTPHost(sSMTPServer,sSMTPUser,sSMTPPwd);
+					ed.setSMTPPort(Integer.parseInt(sSMTPPort));
+					ed.setFrom(sSMTPUser);
+					ed.setTo(sMailCliente); //sMailCliente
+					
+//					if(sMailCC!=null && !sMailCC.isEmpty()) {
+//						ed.setCC(sMailCC);
+//					}
+					
+					String sTextoDel = "<HTML>"
+							+ 		"<HEAD>"
+							+ 			"<meta charset='UTF-8' />"
+							+ 		"</HEAD>"
+							+ 		"<BODY>"
+							+ 			"<section id='email'>"
+							+				"<p>" + "Se ha realizado el cierre de la incidencia " + iIncidencia + " satisfactoriamente.\r\nSi requiere asistencia técnica de nuevo contacte con nuestro departamento de Soporte." + "</p>"
+							+				"<p>" + "Aquí tienes una encuesta para valorar el servicio de soporte: " + "</p>"
+							+ 					"<a href='https://forms.gle/UamsEi8FSiDCVexP8' target='_blank'"
+							+ 						"> Encuesta de satisfacción</a><br />"
+							+ 			"</section>"
+							+ 		"</BODY>"
+							+ 	"</HTML>";
+					
+					ed.setSubject("Cierre de incidencia " + iIncidencia);
+					//ed.setBody("Se ha realizado el cierre de la incidencia " + iIncidencia + " satisfactoriamente.\r\nSi requiere asistencia técnica de nuevo contacte con nuestro departamento de Soporte.");
+					ed.setBody(sTextoDel);
+					ed.setBodyTypeAsHTML();
+					
+					//Enviar el mail
+					ed.sendMsg();
+					//Mensaje de debug si procede
+				} catch (Exception e){
+					e.printStackTrace();
+					e.getMessage();
+					sMensajeError = "Error en envio de mail al cliente: " + e.toString();
+					fmObject.showMessageText(sMensajeError, "Aceptar");
+					return;
+				}
+
+				// Enviar mail al técnico
+				try {
+					EmailDelivery ed = new EmailDelivery();
+					if ("-1".equals(sSMTPSSL)){
+						ed.setProtocolSMTPS(); 
+					} else { ed.setProtocolSMTP(); }
+					
+					//ed.setSMTPHost(sSMTPServer);
+					ed.setSMTPHost(sSMTPServer,sSMTPUser,sSMTPPwd);
+					ed.setSMTPPort(Integer.parseInt(sSMTPPort));
+					ed.setFrom(sSMTPUser);
+					ed.setTo(sMailTecnico);
+					
+//					if(sMailCC!=null && !sMailCC.isEmpty()) {
+//						ed.setCC(sMailCC);
+//					}
+					
+					ed.setSubject("Cierre de incidencia " + iIncidencia);
+					ed.setBody("Hola, " + sNombre + "\r\n\r\n Se ha realizado el cierre de la incidencia " + iIncidencia + " de forma satisfactoria.");
+					
+					//Enviar el mail
+					ed.sendMsg();
+					//Mensaje de debug si procede
+				} catch (Exception e){
+					e.printStackTrace();
+					e.getMessage();
+					sMensajeError = "Error en envio de mail al técnico: " + e.toString();
+					fmObject.showMessageText(sMensajeError, "Aceptar");
+					return;
+				}
+			} 
+			
+			boObject.save();
+			fmObject.save();
+		}
+		
+		if(sViewName.equalsIgnoreCase("btn_reabrir_int")) {
+
+			int ret = fmObject.showMessageText(1, "Desea volver a abrir la incidencia?\r\n", "Sí/No", 1, "Reapertura de incidencia");
+
+			if (ret == 1) {
+				boObject.getItem(ITEMS.txtfecha_hora_cierre).setValue("");
+				boObject.getItem(ITEMS.txttiempo_cierre).setValue("");
+				boObject.getItem(ITEMS.txtdesvporc_cierre).setValue("");
+				boObject.getItem(ITEMS.txtcerrada).setValue(false);
+				sMailCliente = boObject.getItem(ITEMS.txtemail).getValue();
+				iIncidencia = boObject.getItem(ITEMS.txtnum_incidencia).getValueInteger();
+				
+				iTecnico = boObject.getItem(ITEMS.txtconsultor_id).getValueInteger();
+				
+				//Actualizamos las incidencias abiertas del técnico asociado a la incidencia
+				try {
+					String sSqlTecnicos = "SELECT xmax_abiertas, xemail, xnombre, xapellidos FROM " + session.getConnectionSource().translateTable("ext_sop_tecnicos")
+							+ " WHERE xempresa_id = " + session.getConnectionData().formatValue(sEmpresa, DA.DA_DT_TEXT)
+							+ " AND xtecnico_id = " + session.getConnectionData().formatValue(iTecnico, DA.DA_DT_INTEGER);
+
+					resTecnicos = session.getConnectionData().openSQL(sSqlTecnicos);
+
+					if(resTecnicos.moveFirst()) {
+						iMaxAbiertas = resTecnicos.getInt("xmax_abiertas");
+						iMaxAbiertas++;
+						sMailTecnico = resTecnicos.getString("xemail");
+						sNombre = resTecnicos.getString("xnombre");
+						sApellidos = resTecnicos.getString("xapellidos");
+						sNombre += " " + sApellidos;
+					}
+
+				} catch (DAException e) {
+					e.printStackTrace();
+					e.getMessage();
+					sMensajeError = "Error en las líneas: "+ e.toString();
+					fmObject.showMessageText(sMensajeError, "Aceptar");
+					
+					return;
+				} finally {
+					if(resTecnicos != null) {resTecnicos.close(); resTecnicos = null;}
+				}
+				
+				try {
+					String sUpdate = "UPDATE " + session.getConnectionSource().translateTable("ext_sop_tecnicos")
+							+ " SET xmax_abiertas = " + session.getConnectionData().formatValue(iMaxAbiertas, DA.DA_DT_INTEGER)							
+							+ " WHERE xempresa_id = " + session.getConnectionData().formatValue(sEmpresa,DA.DA_DT_TEXT)
+							+ " AND xtecnico_id = " + session.getConnectionData().formatValue(iTecnico,DA.DA_DT_INTEGER);
+
+					session.getConnectionData().execSQL(sUpdate);
+				} catch (DAException e) {
+					e.printStackTrace();
+					e.getMessage();
+					sMensajeError = "Error en las líneas: "+ e.toString();
+					fmObject.showMessageText(sMensajeError, "Aceptar");
+					
+					return;
+				}
+			} 
+			
+			//Notificamos al cliente y al técnico
+			String sSMTPUser = "";
+			String sSMTPPwd = "";
+			String sSMTPServer = "smtp.office365.com";//SMTP = smtp.office365.com
+			String sSMTPPort = "587";//Port = 587 (SIN SSL), Port = 465 (CON SSL)
+			String sSMTPSSL = "1";
+
+			// Enviar mail al cliente
+			try {
+				EmailDelivery ed = new EmailDelivery();
+				if ("-1".equals(sSMTPSSL)){
+					ed.setProtocolSMTPS(); 
+				} else { ed.setProtocolSMTP(); }
+				
+				//ed.setSMTPHost(sSMTPServer);
+				ed.setSMTPHost(sSMTPServer,sSMTPUser,sSMTPPwd);
+				ed.setSMTPPort(Integer.parseInt(sSMTPPort));
+				ed.setFrom(sSMTPUser);
+				ed.setTo(sMailCliente);
+				
+//				if(sMailCC!=null && !sMailCC.isEmpty()) {
+//					ed.setCC(sMailCC);
+//				}
+				
+				ed.setSubject("Reapertura de incidencia " + iIncidencia);
+				ed.setBody("Hemos recibido satisfactoriamente tu petición de asistencia técnica y nuestro departamento de Soporte ha reabierto la incidencia " + iIncidencia + ".");
+				//Enviar el mail
+				ed.sendMsg();
+				//Mensaje de debug si procede
+			} catch (Exception e){
+				e.printStackTrace();
+				e.getMessage();
+				sMensajeError = "Error en envio de mail al cliente: " + e.toString();
+				fmObject.showMessageText(sMensajeError, "Aceptar");
+				return;
+			}
+
+			// Enviar mail al técnico
+			try {
+				EmailDelivery ed = new EmailDelivery();
+				if ("-1".equals(sSMTPSSL)){
+					ed.setProtocolSMTPS(); 
+				} else { ed.setProtocolSMTP(); }
+				
+				//ed.setSMTPHost(sSMTPServer);
+				ed.setSMTPHost(sSMTPServer,sSMTPUser,sSMTPPwd);
+				ed.setSMTPPort(Integer.parseInt(sSMTPPort));
+				ed.setFrom(sSMTPUser);
+				ed.setTo(sMailTecnico);
+				
+//				if(sMailCC!=null && !sMailCC.isEmpty()) {
+//					ed.setCC(sMailCC);
+//				}
+				
+				ed.setSubject("Reapertura de incidencia " + iIncidencia);
+				ed.setBody("Hola, " + sNombre + "\r\n\r\nSe ha realizado la reapertura de la incidencia número " + iIncidencia + ".");
+				//Enviar el mail
+				ed.sendMsg();
+				//Mensaje de debug si procede
+			} catch (Exception e){
+				e.printStackTrace();
+				e.getMessage();
+				sMensajeError = "Error en envio de mail al técnico: " + e.toString();
+				fmObject.showMessageText(sMensajeError, "Aceptar");
+				return;
+			}
+			
+			boObject.save();
+			fmObject.save();
+		}
+		
+	}
+
+
+}
